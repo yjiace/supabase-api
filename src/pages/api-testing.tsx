@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,6 +48,7 @@ export const ApiTesting: React.FC = () => {
     apiKey: ''
   })
   
+  const [showSettings, setShowSettings] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(apiCategories[0]?.id || '')
   const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(null)
   const [testRequest, setTestRequest] = useState<TestRequest>({
@@ -60,6 +61,30 @@ export const ApiTesting: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [testResponse, setTestResponse] = useState<TestResponse | null>(null)
   const [testHistory, setTestHistory] = useState<Array<{ request: TestRequest; response: TestResponse; timestamp: Date }>>([])
+
+  // Load config from localStorage on component mount
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('supabase-api-config')
+    if (savedConfig) {
+      try {
+        const parsedConfig = JSON.parse(savedConfig)
+        setConfig(parsedConfig)
+        // If config exists, hide settings by default
+        setShowSettings(false)
+      } catch (error) {
+        console.error('Failed to parse saved config:', error)
+      }
+    } else {
+      // If no config exists, show settings by default
+      setShowSettings(true)
+    }
+  }, [])
+
+  // Save config to localStorage whenever it changes
+  const saveConfig = (newConfig: TestConfig) => {
+    setConfig(newConfig)
+    localStorage.setItem('supabase-api-config', JSON.stringify(newConfig))
+  }
 
   const categoryOptions = apiCategories.map(cat => ({
     value: cat.id,
@@ -210,52 +235,68 @@ export const ApiTesting: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
-      {/* Configuration Panel */}
-      <div className="bg-dark-surface border-b border-dark-border p-6">
+      {/* Header Panel */}
+      <div className={`bg-dark-surface border-b border-dark-border ${showSettings ? 'p-6' : 'px-6 py-4'}`}>
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3 mb-6">
-            <Settings className="w-6 h-6 text-neon-green" />
-            <h1 className="text-2xl font-bold text-cyber-light">接口测试</h1>
-            <div className="flex items-center space-x-2">
-              {isConfigValid ? (
-                <Badge variant="success" className="flex items-center space-x-1">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>已配置</span>
-                </Badge>
-              ) : (
-                <Badge variant="error" className="flex items-center space-x-1">
-                  <XCircle className="w-3 h-3" />
-                  <span>未配置</span>
-                </Badge>
-              )}
+          <div className={`flex items-center justify-between ${showSettings ? 'mb-6' : 'mb-0'}`}>
+            <div className="flex items-center space-x-3">
+              <Settings className="w-6 h-6 text-neon-green" />
+              <h1 className="text-2xl font-bold text-cyber-light">接口测试</h1>
+              <div className="flex items-center space-x-2">
+                {isConfigValid ? (
+                  <Badge variant="success" className="flex items-center space-x-1">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>已配置</span>
+                  </Badge>
+                ) : (
+                  <Badge variant="error" className="flex items-center space-x-1">
+                    <XCircle className="w-3 h-3" />
+                    <span>未配置</span>
+                  </Badge>
+                )}
+              </div>
             </div>
+            
+            {/* Settings Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
+            >
+              <Settings className="w-4 h-4" />
+              <span>{showSettings ? '隐藏设置' : '显示设置'}</span>
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-cyber-light mb-2">
-                <Globe className="w-4 h-4 inline mr-2" />
-                Supabase URL
-              </label>
-              <Input
-                placeholder="https://your-project.supabase.co"
-                value={config.supabaseUrl}
-                onChange={(e) => setConfig(prev => ({ ...prev, supabaseUrl: e.target.value }))}
-              />
+          {/* Configuration Panel - Conditionally Rendered */}
+          {showSettings && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="block text-sm font-medium text-cyber-light mb-2">
+                  <Globe className="w-4 h-4 inline mr-2" />
+                  Supabase URL
+                </label>
+                <Input
+                  placeholder="https://your-project.supabase.co"
+                  value={config.supabaseUrl}
+                  onChange={(e) => saveConfig({ ...config, supabaseUrl: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-cyber-light mb-2">
+                  <Key className="w-4 h-4 inline mr-2" />
+                  API Key
+                </label>
+                <Input
+                  type="password"
+                  placeholder="your-supabase-anon-key"
+                  value={config.apiKey}
+                  onChange={(e) => saveConfig({ ...config, apiKey: e.target.value })}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-cyber-light mb-2">
-                <Key className="w-4 h-4 inline mr-2" />
-                API Key
-              </label>
-              <Input
-                type="password"
-                placeholder="your-supabase-anon-key"
-                value={config.apiKey}
-                onChange={(e) => setConfig(prev => ({ ...prev, apiKey: e.target.value }))}
-              />
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
