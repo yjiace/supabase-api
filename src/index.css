@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: rgb(42 42 43);
+  }
+  
+  body {
+    background-color: rgb(10 10 11);
+    color: rgb(255 255 255);
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .grid-background {
+    background-image: 
+      linear-gradient(rgba(0, 255, 136, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 136, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridMove 20s linear infinite;
+  }
+  
+  .neon-glow {
+    box-shadow: 
+      0 0 5px rgba(0, 255, 136, 0.5),
+      0 0 10px rgba(0, 255, 136, 0.3),
+      0 0 15px rgba(0, 255, 136, 0.2);
+  }
+  
+  .neon-glow-blue {
+    box-shadow: 
+      0 0 5px rgba(0, 212, 255, 0.5),
+      0 0 10px rgba(0, 212, 255, 0.3),
+      0 0 15px rgba(0, 212, 255, 0.2);
+  }
+  
+  .cyber-border {
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    background: rgba(26, 26, 27, 0.8);
+    backdrop-filter: blur(10px);
+  }
+  
+  .cyber-card {
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    background: rgba(26, 26, 27, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+  }
+  
+  .cyber-card:hover {
+    box-shadow: 
+      0 0 5px rgba(0, 255, 136, 0.5),
+      0 0 10px rgba(0, 255, 136, 0.3),
+      0 0 15px rgba(0, 255, 136, 0.2);
+    transform: translateY(-0.25rem);
+    border-color: rgba(0, 255, 136, 0.6);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(26, 26, 27, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 136, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 136, 0.5);
+}
+
+/* Code syntax highlighting */
+.code-block {
+  background-color: rgb(26 26 27);
+  border: 1px solid rgb(42 42 43);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+}
+
+.code-block pre {
+  margin: 0;
+  color: #e5e7eb;
+}
+
+.code-block .token.string {
+  color: #10b981;
+}
+
+.code-block .token.number {
+  color: #3b82f6;
+}
+
+.code-block .token.keyword {
+  color: #8b5cf6;
+}
+
+.code-block .token.function {
+  color: #f59e0b;
+}

@@ -1,0 +1,33 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00FF88;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#0A0A0B"/>
+  
+  <!-- Lightning bolt shape representing API power -->
+  <path d="M18 4L10 16H14L12 28L20 16H16L18 4Z" 
+        fill="url(#gradient)" 
+        filter="url(#glow)"
+        stroke="url(#gradient)" 
+        stroke-width="0.5"/>
+  
+  <!-- Subtle grid pattern -->
+  <defs>
+    <pattern id="grid" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M 4 0 L 0 0 0 4" fill="none" stroke="#00FF88" stroke-width="0.2" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="url(#grid)" opacity="0.5"/>
+</svg>
