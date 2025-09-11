@@ -15,7 +15,11 @@ export const ApiDocs: React.FC = () => {
     auth: Shield,
     database: Database,
     storage: Globe,
-    realtime: Zap
+    realtime: Zap,
+    'edge-functions': Zap,
+    admin: Shield,
+    webhooks: Globe,
+    analytics: Database
   }
 
   const methodColors = {
