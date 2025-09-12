@@ -48,625 +48,6 @@ export interface ApiCategory {
 
 export const apiCategories: ApiCategory[] = [
   {
-    id: 'auth',
-    name: '身份认证',
-    description: '用户注册、登录、登出等认证相关接口',
-    endpoints: [
-      {
-        id: 'auth-signup',
-        name: '用户注册',
-        method: 'POST',
-        path: '/auth/v1/signup',
-        description: '创建新用户账户',
-        requestBody: {
-          type: 'application/json',
-          description: '用户注册信息',
-          schema: {
-            type: 'object',
-            properties: {
-              email: { type: 'string', format: 'email' },
-              password: { type: 'string', minLength: 6 },
-              data: { type: 'object', description: '用户元数据' }
-            }
-          },
-          example: {
-            email: 'user@example.com',
-            password: 'password123',
-            data: { name: 'John Doe', age: 30 }
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '注册成功',
-            example: {
-              user: {
-                id: '123e4567-e89b-12d3-a456-426614174000',
-                email: 'user@example.com',
-                created_at: '2023-01-01T00:00:00.000Z'
-              },
-              session: {
-                access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-                refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-                expires_in: 3600
-              }
-            }
-          },
-          {
-            status: 400,
-            description: '请求参数错误',
-            example: {
-              error: 'Invalid email format'
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '基本注册',
-            description: '使用邮箱和密码注册新用户',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/signup' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "email": "user@example.com",
-  "password": "password123"
-}'`,
-            response: `{
-  "user": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "email": "user@example.com",
-    "created_at": "2023-01-01T00:00:00.000Z"
-  },
-  "session": {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expires_in": 3600
-  }
-}`
-          }
-        ]
-      },
-      {
-        id: 'auth-signin',
-        name: '用户登录',
-        method: 'POST',
-        path: '/auth/v1/token?grant_type=password',
-        description: '用户登录获取访问令牌',
-        requestBody: {
-          type: 'application/json',
-          description: '登录凭据',
-          schema: {
-            type: 'object',
-            properties: {
-              email: { type: 'string', format: 'email' },
-              password: { type: 'string' }
-            }
-          },
-          example: {
-            email: 'user@example.com',
-            password: 'password123'
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '登录成功',
-            example: {
-              access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              expires_in: 3600,
-              user: {
-                id: '123e4567-e89b-12d3-a456-426614174000',
-                email: 'user@example.com'
-              }
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '邮箱密码登录',
-            description: '使用邮箱和密码登录',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/token?grant_type=password' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "email": "user@example.com",
-  "password": "password123"
-}'`,
-            response: `{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 3600,
-  "user": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "email": "user@example.com"
-  }
-}`
-          }
-        ]
-      },
-      {
-        id: 'auth-signout',
-        name: '用户登出',
-        method: 'POST',
-        path: '/auth/v1/logout',
-        description: '用户登出并撤销访问令牌',
-        responses: [
-          {
-            status: 204,
-            description: '登出成功'
-          }
-        ],
-        examples: [
-          {
-            title: '用户登出',
-            description: '撤销当前用户的访问令牌',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/logout' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
-            response: `// 204 No Content`
-          }
-        ]
-      },
-      {
-        id: 'auth-refresh',
-        name: '刷新令牌',
-        method: 'POST',
-        path: '/auth/v1/token?grant_type=refresh_token',
-        description: '使用刷新令牌获取新的访问令牌',
-        requestBody: {
-          type: 'application/json',
-          description: '刷新令牌',
-          schema: {
-            type: 'object',
-            properties: {
-              refresh_token: { type: 'string' }
-            }
-          },
-          example: {
-            refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '刷新成功',
-            example: {
-              access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              expires_in: 3600
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '刷新访问令牌',
-            description: '使用刷新令牌获取新的访问令牌',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/token?grant_type=refresh_token' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}'`,
-            response: `{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 3600
-}`
-          }
-        ]
-      },
-      {
-        id: 'auth-user',
-        name: '获取用户信息',
-        method: 'GET',
-        path: '/auth/v1/user',
-        description: '获取当前登录用户的信息',
-        responses: [
-          {
-            status: 200,
-            description: '获取成功',
-            example: {
-              id: '123e4567-e89b-12d3-a456-426614174000',
-              email: 'user@example.com',
-              created_at: '2023-01-01T00:00:00.000Z',
-              user_metadata: {
-                name: 'John Doe'
-              }
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '获取用户信息',
-            description: '获取当前登录用户的详细信息',
-            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/user' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
-            response: `{
-  "id": "123e4567-e89b-12d3-a456-426614174000",
-  "email": "user@example.com",
-  "created_at": "2023-01-01T00:00:00.000Z",
-  "user_metadata": {
-    "name": "John Doe"
-  }
-}`
-          }
-        ]
-      },
-      {
-        id: 'auth-update-user',
-        name: '更新用户信息',
-        method: 'PUT',
-        path: '/auth/v1/user',
-        description: '更新当前登录用户的信息',
-        requestBody: {
-          type: 'application/json',
-          description: '要更新的用户信息',
-          schema: {
-            type: 'object',
-            properties: {
-              email: { type: 'string', format: 'email' },
-              password: { type: 'string' },
-              data: { type: 'object' }
-            }
-          },
-          example: {
-            data: {
-              name: 'Jane Doe',
-              avatar_url: 'https://example.com/avatar.jpg'
-            }
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '更新成功',
-            example: {
-              id: '123e4567-e89b-12d3-a456-426614174000',
-              email: 'user@example.com',
-              user_metadata: {
-                name: 'Jane Doe',
-                avatar_url: 'https://example.com/avatar.jpg'
-              }
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '更新用户元数据',
-            description: '更新用户的自定义数据',
-            request: `curl -X PUT 'https://your-project.supabase.co/auth/v1/user' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \\
--H 'Content-Type: application/json' \\
--d '{
-  "data": {
-    "name": "Jane Doe",
-    "avatar_url": "https://example.com/avatar.jpg"
-  }
-}'`,
-            response: `{
-  "id": "123e4567-e89b-12d3-a456-426614174000",
-  "email": "user@example.com",
-  "user_metadata": {
-    "name": "Jane Doe",
-    "avatar_url": "https://example.com/avatar.jpg"
-  }
-}`
-          }
-        ]
-      },
-      {
-        id: 'auth-reset-password',
-        name: '重置密码',
-        method: 'POST',
-        path: '/auth/v1/recover',
-        description: '发送密码重置邮件',
-        requestBody: {
-          type: 'application/json',
-          description: '用户邮箱',
-          schema: {
-            type: 'object',
-            properties: {
-              email: { type: 'string', format: 'email' }
-            }
-          },
-          example: {
-            email: 'user@example.com'
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '重置邮件已发送'
-          }
-        ],
-        examples: [
-          {
-            title: '发送密码重置邮件',
-            description: '向用户邮箱发送密码重置链接',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/recover' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "email": "user@example.com"
-}'`,
-            response: `{}`
-          }
-        ]
-      },
-      {
-        id: 'auth-oauth',
-        name: 'OAuth登录',
-        method: 'GET',
-        path: '/auth/v1/authorize',
-        description: '通过第三方OAuth提供商登录',
-        parameters: [
-          {
-            name: 'provider',
-            type: 'string',
-            required: true,
-            description: 'OAuth提供商：google, github, facebook, apple等',
-            example: 'google'
-          },
-          {
-            name: 'redirect_to',
-            type: 'string',
-            required: false,
-            description: '登录成功后的重定向URL',
-            example: 'https://yourapp.com/dashboard'
-          }
-        ],
-        responses: [
-          {
-            status: 302,
-            description: '重定向到OAuth提供商'
-          }
-        ],
-        examples: [
-          {
-            title: 'Google OAuth登录',
-            description: '使用Google账号登录',
-            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/authorize?provider=google&redirect_to=https://yourapp.com/dashboard' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY'`,
-            response: `// 302 重定向到 Google OAuth 页面`
-          }
-        ]
-      },
-      {
-        id: 'auth-magic-link',
-        name: '魔法链接登录',
-        method: 'POST',
-        path: '/auth/v1/magiclink',
-        description: '发送无密码登录的魔法链接',
-        requestBody: {
-          type: 'application/json',
-          description: '用户邮箱',
-          schema: {
-            type: 'object',
-            properties: {
-              email: { type: 'string', format: 'email' }
-            }
-          },
-          example: {
-            email: 'user@example.com'
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '魔法链接已发送'
-          }
-        ],
-        examples: [
-          {
-            title: '发送魔法链接',
-            description: '向用户邮箱发送无密码登录链接',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/magiclink' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "email": "user@example.com"
-}'`,
-            response: `{}`
-          }
-        ]
-      },
-      {
-        id: 'auth-verify-otp',
-        name: '验证OTP',
-        method: 'POST',
-        path: '/auth/v1/verify',
-        description: '验证一次性密码或令牌',
-        requestBody: {
-          type: 'application/json',
-          description: 'OTP验证信息',
-          schema: {
-            type: 'object',
-            properties: {
-              type: { type: 'string', enum: ['signup', 'magiclink', 'recovery', 'invite'] },
-              token: { type: 'string' },
-              email: { type: 'string', format: 'email' }
-            }
-          },
-          example: {
-            type: 'magiclink',
-            token: '123456',
-            email: 'user@example.com'
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '验证成功',
-            example: {
-              access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-              user: {
-                id: '123e4567-e89b-12d3-a456-426614174000',
-                email: 'user@example.com'
-              }
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '验证魔法链接令牌',
-            description: '验证用户点击魔法链接后的令牌',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/verify' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "type": "magiclink",
-  "token": "123456",
-  "email": "user@example.com"
-}'`,
-            response: `{
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "email": "user@example.com"
-  }
-}`
-          }
-        ]
-      },
-      {
-        id: 'auth-sso',
-        name: 'SSO登录',
-        method: 'GET',
-        path: '/auth/v1/sso',
-        description: '单点登录(SSO)认证',
-        parameters: [
-          {
-            name: 'provider_id',
-            type: 'string',
-            required: true,
-            description: 'SSO提供商ID',
-            example: 'sso-provider-uuid'
-          },
-          {
-            name: 'redirect_to',
-            type: 'string',
-            required: false,
-            description: '登录成功后的重定向URL',
-            example: 'https://yourapp.com/dashboard'
-          }
-        ],
-        responses: [
-          {
-            status: 302,
-            description: '重定向到SSO提供商',
-            example: {
-              location: 'https://sso-provider.com/auth?...'
-            }
-          }
-        ],
-        examples: [
-          {
-            title: 'SAML SSO登录',
-            description: '通过SAML提供商进行单点登录',
-            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/sso?provider_id=sso-provider-uuid&redirect_to=https://yourapp.com/dashboard' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY'`,
-            response: `HTTP/1.1 302 Found
-Location: https://sso-provider.com/auth?...`
-          }
-        ]
-      },
-      {
-        id: 'auth-callback',
-        name: 'OAuth回调',
-        method: 'GET',
-        path: '/auth/v1/callback',
-        description: 'OAuth提供商的回调处理',
-        parameters: [
-          {
-            name: 'code',
-            type: 'string',
-            required: true,
-            description: 'OAuth授权码',
-            example: 'oauth_code_123'
-          },
-          {
-            name: 'state',
-            type: 'string',
-            required: false,
-            description: 'OAuth状态参数',
-            example: 'random_state_string'
-          }
-        ],
-        responses: [
-          {
-            status: 302,
-            description: '重定向到应用并携带令牌',
-            example: {
-              location: 'https://yourapp.com/auth/callback#access_token=...'
-            }
-          }
-        ],
-        examples: [
-          {
-            title: 'GitHub OAuth回调',
-            description: 'GitHub OAuth认证完成后的回调处理',
-            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/callback?code=oauth_code_123&state=random_state_string' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY'`,
-            response: `HTTP/1.1 302 Found
-Location: https://yourapp.com/auth/callback#access_token=...`
-          }
-        ]
-      },
-      {
-        id: 'auth-resend',
-        name: '重发确认邮件',
-        method: 'POST',
-        path: '/auth/v1/resend',
-        description: '重新发送确认邮件或OTP',
-        requestBody: {
-          type: 'application/json',
-          description: '重发请求信息',
-          schema: {
-            type: 'object',
-            properties: {
-              type: { type: 'string', enum: ['signup', 'email_change'] },
-              email: { type: 'string', format: 'email' }
-            }
-          },
-          example: {
-            type: 'signup',
-            email: 'user@example.com'
-          }
-        },
-        responses: [
-          {
-            status: 200,
-            description: '邮件发送成功',
-            example: {
-              message: 'Confirmation email sent'
-            }
-          }
-        ],
-        examples: [
-          {
-            title: '重发注册确认邮件',
-            description: '为未确认的用户重新发送确认邮件',
-            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/resend' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Content-Type: application/json' \\
--d '{
-  "type": "signup",
-  "email": "user@example.com"
-}'`,
-            response: `{
-  "message": "Confirmation email sent"
-}`
-          }
-        ]
-      }
-    ]
-  },
-  {
     id: 'database',
     name: '数据库操作',
     description: '数据的增删改查操作',
@@ -1305,6 +686,625 @@ Location: https://yourapp.com/auth/callback#access_token=...`
     ]
   }
 ]`
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'auth',
+    name: '身份认证',
+    description: '用户注册、登录、登出等认证相关接口',
+    endpoints: [
+      {
+        id: 'auth-signup',
+        name: '用户注册',
+        method: 'POST',
+        path: '/auth/v1/signup',
+        description: '创建新用户账户',
+        requestBody: {
+          type: 'application/json',
+          description: '用户注册信息',
+          schema: {
+            type: 'object',
+            properties: {
+              email: { type: 'string', format: 'email' },
+              password: { type: 'string', minLength: 6 },
+              data: { type: 'object', description: '用户元数据' }
+            }
+          },
+          example: {
+            email: 'user@example.com',
+            password: 'password123',
+            data: { name: 'John Doe', age: 30 }
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '注册成功',
+            example: {
+              user: {
+                id: '123e4567-e89b-12d3-a456-426614174000',
+                email: 'user@example.com',
+                created_at: '2023-01-01T00:00:00.000Z'
+              },
+              session: {
+                access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                expires_in: 3600
+              }
+            }
+          },
+          {
+            status: 400,
+            description: '请求参数错误',
+            example: {
+              error: 'Invalid email format'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '基本注册',
+            description: '使用邮箱和密码注册新用户',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/signup' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "email": "user@example.com",
+  "password": "password123"
+}'`,
+            response: `{
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "user@example.com",
+    "created_at": "2023-01-01T00:00:00.000Z"
+  },
+  "session": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_in": 3600
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'auth-signin',
+        name: '用户登录',
+        method: 'POST',
+        path: '/auth/v1/token?grant_type=password',
+        description: '用户登录获取访问令牌',
+        requestBody: {
+          type: 'application/json',
+          description: '登录凭据',
+          schema: {
+            type: 'object',
+            properties: {
+              email: { type: 'string', format: 'email' },
+              password: { type: 'string' }
+            }
+          },
+          example: {
+            email: 'user@example.com',
+            password: 'password123'
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '登录成功',
+            example: {
+              access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              expires_in: 3600,
+              user: {
+                id: '123e4567-e89b-12d3-a456-426614174000',
+                email: 'user@example.com'
+              }
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '邮箱密码登录',
+            description: '使用邮箱和密码登录',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/token?grant_type=password' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "email": "user@example.com",
+  "password": "password123"
+}'`,
+            response: `{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 3600,
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "user@example.com"
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'auth-signout',
+        name: '用户登出',
+        method: 'POST',
+        path: '/auth/v1/logout',
+        description: '用户登出并撤销访问令牌',
+        responses: [
+          {
+            status: 204,
+            description: '登出成功'
+          }
+        ],
+        examples: [
+          {
+            title: '用户登出',
+            description: '撤销当前用户的访问令牌',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/logout' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `// 204 No Content`
+          }
+        ]
+      },
+      {
+        id: 'auth-refresh',
+        name: '刷新令牌',
+        method: 'POST',
+        path: '/auth/v1/token?grant_type=refresh_token',
+        description: '使用刷新令牌获取新的访问令牌',
+        requestBody: {
+          type: 'application/json',
+          description: '刷新令牌',
+          schema: {
+            type: 'object',
+            properties: {
+              refresh_token: { type: 'string' }
+            }
+          },
+          example: {
+            refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '刷新成功',
+            example: {
+              access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              expires_in: 3600
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '刷新访问令牌',
+            description: '使用刷新令牌获取新的访问令牌',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/token?grant_type=refresh_token' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}'`,
+            response: `{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 3600
+}`
+          }
+        ]
+      },
+      {
+        id: 'auth-user',
+        name: '获取用户信息',
+        method: 'GET',
+        path: '/auth/v1/user',
+        description: '获取当前登录用户的信息',
+        responses: [
+          {
+            status: 200,
+            description: '获取成功',
+            example: {
+              id: '123e4567-e89b-12d3-a456-426614174000',
+              email: 'user@example.com',
+              created_at: '2023-01-01T00:00:00.000Z',
+              user_metadata: {
+                name: 'John Doe'
+              }
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '获取用户信息',
+            description: '获取当前登录用户的详细信息',
+            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/user' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "email": "user@example.com",
+  "created_at": "2023-01-01T00:00:00.000Z",
+  "user_metadata": {
+    "name": "John Doe"
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'auth-update-user',
+        name: '更新用户信息',
+        method: 'PUT',
+        path: '/auth/v1/user',
+        description: '更新当前登录用户的信息',
+        requestBody: {
+          type: 'application/json',
+          description: '要更新的用户信息',
+          schema: {
+            type: 'object',
+            properties: {
+              email: { type: 'string', format: 'email' },
+              password: { type: 'string' },
+              data: { type: 'object' }
+            }
+          },
+          example: {
+            data: {
+              name: 'Jane Doe',
+              avatar_url: 'https://example.com/avatar.jpg'
+            }
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '更新成功',
+            example: {
+              id: '123e4567-e89b-12d3-a456-426614174000',
+              email: 'user@example.com',
+              user_metadata: {
+                name: 'Jane Doe',
+                avatar_url: 'https://example.com/avatar.jpg'
+              }
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '更新用户元数据',
+            description: '更新用户的自定义数据',
+            request: `curl -X PUT 'https://your-project.supabase.co/auth/v1/user' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "data": {
+    "name": "Jane Doe",
+    "avatar_url": "https://example.com/avatar.jpg"
+  }
+}'`,
+            response: `{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "email": "user@example.com",
+  "user_metadata": {
+    "name": "Jane Doe",
+    "avatar_url": "https://example.com/avatar.jpg"
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'auth-reset-password',
+        name: '重置密码',
+        method: 'POST',
+        path: '/auth/v1/recover',
+        description: '发送密码重置邮件',
+        requestBody: {
+          type: 'application/json',
+          description: '用户邮箱',
+          schema: {
+            type: 'object',
+            properties: {
+              email: { type: 'string', format: 'email' }
+            }
+          },
+          example: {
+            email: 'user@example.com'
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '重置邮件已发送'
+          }
+        ],
+        examples: [
+          {
+            title: '发送密码重置邮件',
+            description: '向用户邮箱发送密码重置链接',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/recover' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "email": "user@example.com"
+}'`,
+            response: `{}`
+          }
+        ]
+      },
+      {
+        id: 'auth-oauth',
+        name: 'OAuth登录',
+        method: 'GET',
+        path: '/auth/v1/authorize',
+        description: '通过第三方OAuth提供商登录',
+        parameters: [
+          {
+            name: 'provider',
+            type: 'string',
+            required: true,
+            description: 'OAuth提供商：google, github, facebook, apple等',
+            example: 'google'
+          },
+          {
+            name: 'redirect_to',
+            type: 'string',
+            required: false,
+            description: '登录成功后的重定向URL',
+            example: 'https://yourapp.com/dashboard'
+          }
+        ],
+        responses: [
+          {
+            status: 302,
+            description: '重定向到OAuth提供商'
+          }
+        ],
+        examples: [
+          {
+            title: 'Google OAuth登录',
+            description: '使用Google账号登录',
+            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/authorize?provider=google&redirect_to=https://yourapp.com/dashboard' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY'`,
+            response: `// 302 重定向到 Google OAuth 页面`
+          }
+        ]
+      },
+      {
+        id: 'auth-magic-link',
+        name: '魔法链接登录',
+        method: 'POST',
+        path: '/auth/v1/magiclink',
+        description: '发送无密码登录的魔法链接',
+        requestBody: {
+          type: 'application/json',
+          description: '用户邮箱',
+          schema: {
+            type: 'object',
+            properties: {
+              email: { type: 'string', format: 'email' }
+            }
+          },
+          example: {
+            email: 'user@example.com'
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '魔法链接已发送'
+          }
+        ],
+        examples: [
+          {
+            title: '发送魔法链接',
+            description: '向用户邮箱发送无密码登录链接',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/magiclink' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "email": "user@example.com"
+}'`,
+            response: `{}`
+          }
+        ]
+      },
+      {
+        id: 'auth-verify-otp',
+        name: '验证OTP',
+        method: 'POST',
+        path: '/auth/v1/verify',
+        description: '验证一次性密码或令牌',
+        requestBody: {
+          type: 'application/json',
+          description: 'OTP验证信息',
+          schema: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['signup', 'magiclink', 'recovery', 'invite'] },
+              token: { type: 'string' },
+              email: { type: 'string', format: 'email' }
+            }
+          },
+          example: {
+            type: 'magiclink',
+            token: '123456',
+            email: 'user@example.com'
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '验证成功',
+            example: {
+              access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              user: {
+                id: '123e4567-e89b-12d3-a456-426614174000',
+                email: 'user@example.com'
+              }
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '验证魔法链接令牌',
+            description: '验证用户点击魔法链接后的令牌',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/verify' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "type": "magiclink",
+  "token": "123456",
+  "email": "user@example.com"
+}'`,
+            response: `{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "user@example.com"
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'auth-sso',
+        name: 'SSO登录',
+        method: 'GET',
+        path: '/auth/v1/sso',
+        description: '单点登录(SSO)认证',
+        parameters: [
+          {
+            name: 'provider_id',
+            type: 'string',
+            required: true,
+            description: 'SSO提供商ID',
+            example: 'sso-provider-uuid'
+          },
+          {
+            name: 'redirect_to',
+            type: 'string',
+            required: false,
+            description: '登录成功后的重定向URL',
+            example: 'https://yourapp.com/dashboard'
+          }
+        ],
+        responses: [
+          {
+            status: 302,
+            description: '重定向到SSO提供商',
+            example: {
+              location: 'https://sso-provider.com/auth?...'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: 'SAML SSO登录',
+            description: '通过SAML提供商进行单点登录',
+            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/sso?provider_id=sso-provider-uuid&redirect_to=https://yourapp.com/dashboard' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY'`,
+            response: `HTTP/1.1 302 Found
+Location: https://sso-provider.com/auth?...`
+          }
+        ]
+      },
+      {
+        id: 'auth-callback',
+        name: 'OAuth回调',
+        method: 'GET',
+        path: '/auth/v1/callback',
+        description: 'OAuth提供商的回调处理',
+        parameters: [
+          {
+            name: 'code',
+            type: 'string',
+            required: true,
+            description: 'OAuth授权码',
+            example: 'oauth_code_123'
+          },
+          {
+            name: 'state',
+            type: 'string',
+            required: false,
+            description: 'OAuth状态参数',
+            example: 'random_state_string'
+          }
+        ],
+        responses: [
+          {
+            status: 302,
+            description: '重定向到应用并携带令牌',
+            example: {
+              location: 'https://yourapp.com/auth/callback#access_token=...'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: 'GitHub OAuth回调',
+            description: 'GitHub OAuth认证完成后的回调处理',
+            request: `curl -X GET 'https://your-project.supabase.co/auth/v1/callback?code=oauth_code_123&state=random_state_string' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY'`,
+            response: `HTTP/1.1 302 Found
+Location: https://yourapp.com/auth/callback#access_token=...`
+          }
+        ]
+      },
+      {
+        id: 'auth-resend',
+        name: '重发确认邮件',
+        method: 'POST',
+        path: '/auth/v1/resend',
+        description: '重新发送确认邮件或OTP',
+        requestBody: {
+          type: 'application/json',
+          description: '重发请求信息',
+          schema: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['signup', 'email_change'] },
+              email: { type: 'string', format: 'email' }
+            }
+          },
+          example: {
+            type: 'signup',
+            email: 'user@example.com'
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '邮件发送成功',
+            example: {
+              message: 'Confirmation email sent'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '重发注册确认邮件',
+            description: '为未确认的用户重新发送确认邮件',
+            request: `curl -X POST 'https://your-project.supabase.co/auth/v1/resend' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "type": "signup",
+  "email": "user@example.com"
+}'`,
+            response: `{
+  "message": "Confirmation email sent"
+}`
           }
         ]
       }
