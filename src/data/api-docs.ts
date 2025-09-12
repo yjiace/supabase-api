@@ -572,65 +572,7 @@ export const apiCategories: ApiCategory[] = [
           }
         ]
       },
-      {
-        id: 'db-aggregate',
-        name: '聚合查询',
-        method: 'GET',
-        path: '/rest/v1/{table}',
-        description: '执行聚合函数查询（sum, avg, min, max等）',
-        parameters: [
-          {
-            name: 'table',
-            type: 'string',
-            required: true,
-            description: '表名',
-            example: 'orders'
-          },
-          {
-            name: 'select',
-            type: 'string',
-            required: true,
-            description: '聚合函数，如sum(amount), avg(rating), count(*)',
-            example: 'sum(amount),avg(rating),count(*)'
-          },
-          {
-            name: 'filter',
-            type: 'string',
-            required: false,
-            description: '过滤条件',
-            example: 'created_at=gte.2023-01-01'
-          }
-        ],
-        responses: [
-          {
-            status: 200,
-            description: '聚合查询成功',
-            example: [
-              {
-                sum: 15000.50,
-                avg: 4.2,
-                count: 125
-              }
-            ]
-          }
-        ],
-        examples: [
-          {
-            title: '订单统计',
-            description: '获取订单的总金额、平均评分和数量',
-            request: `curl -X GET 'https://your-project.supabase.co/rest/v1/orders?select=sum(amount),avg(rating),count(*)&created_at=gte.2023-01-01' \\
--H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
--H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
-            response: `[
-  {
-    "sum": 15000.50,
-    "avg": 4.2,
-    "count": 125
-  }
-]`
-          }
-        ]
-      },
+
       {
         id: 'db-join-query',
         name: '关联查询',
