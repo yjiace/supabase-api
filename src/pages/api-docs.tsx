@@ -21,23 +21,45 @@ import {
   BarChart3,
   Lock,
   Server,
-  Cloud
+  Cloud,
+  FileText,
+  GitBranch,
+  Package,
+  Archive,
+  Award,
+  Network,
+  Layers,
+  Puzzle,
+  History,
+  FolderOpen
 } from 'lucide-react'
 
 export const ApiDocs: React.FC = () => {
-  const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(apiCategories[0]?.endpoints[0] || null)
+  const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(
+    apiCategories.find(cat => cat.id === 'database')?.endpoints[0] || 
+    apiCategories[0]?.endpoints[0] || 
+    null
+  )
   const [searchTerm, setSearchTerm] = useState('')
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['auth']))
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   const categoryIcons = {
-    auth: Users,           // 用户认证 - 用户图标更直观
-    database: Database,    // 数据库操作 - 保持数据库图标
-    storage: HardDrive,    // 存储服务 - 硬盘图标更贴切
-    realtime: Wifi,        // 实时通信 - WiFi图标表示实时连接
-    'edge-functions': Code, // 边缘函数 - 代码图标表示函数
-    admin: Settings,       // 管理接口 - 设置图标表示管理
-    webhooks: Webhook,     // Webhook - 专用的Webhook图标
-    analytics: BarChart3   // 分析统计 - 柱状图图标表示数据分析
+    auth: Shield,              // 身份认证 - 盾牌图标表示安全认证
+    database: Database,        // 数据库操作 - 数据库图标
+    schema: FileText,          // 数据库模式 - 文档图标表示结构定义
+    'rls-policies': Lock,      // RLS策略管理 - 锁图标表示权限控制
+    'database-functions': Code, // 数据库函数 - 代码图标表示函数
+    extensions: Puzzle,        // PostgreSQL扩展 - 拼图图标表示扩展功能
+    migrations: GitBranch,     // 数据库迁移 - 分支图标表示版本迁移
+    storage: HardDrive,        // 文件存储 - 硬盘图标表示存储
+    realtime: Wifi,            // 实时订阅 - WiFi图标表示实时连接
+    'edge-functions': Zap,     // 边缘函数 - 闪电图标表示快速执行
+    admin: Settings,           // 管理接口 - 设置图标表示管理
+    webhooks: Webhook,         // Webhook - 专用Webhook图标
+    'backup-restore': Archive, // 备份恢复 - 归档图标表示备份
+    'ssl-certificates': Award, // SSL证书管理 - 奖章图标表示证书认证
+    'custom-domains': Network, // 自定义域名 - 网络图标表示域名配置
+    analytics: BarChart3       // 分析统计 - 柱状图图标表示数据分析
   }
 
   const methodColors = {
@@ -59,7 +81,16 @@ export const ApiDocs: React.FC = () => {
     setExpandedCategories(newExpanded)
   }
 
-  const filteredCategories = apiCategories.map(category => ({
+  // 重新排序分组，将数据库操作移到第一位
+  const reorderedCategories = [...apiCategories].sort((a, b) => {
+    if (a.id === 'database') return -1
+    if (b.id === 'database') return 1
+    if (a.id === 'auth') return b.id === 'database' ? 1 : -1
+    if (b.id === 'auth') return a.id === 'database' ? -1 : 1
+    return 0
+  })
+
+  const filteredCategories = reorderedCategories.map(category => ({
     ...category,
     endpoints: category.endpoints.filter(endpoint =>
       endpoint.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
