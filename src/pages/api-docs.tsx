@@ -4,7 +4,25 @@ import { Badge } from '@/components/ui/badge'
 import { CodeBlock } from '@/components/ui/code-block'
 import { Input } from '@/components/ui/input'
 import { apiCategories, ApiEndpoint, ApiCategory } from '@/data/api-docs'
-import { Search, ChevronRight, ChevronDown, Globe, Database, Shield, Zap } from 'lucide-react'
+import { 
+  Search, 
+  ChevronRight, 
+  ChevronDown, 
+  Globe, 
+  Database, 
+  Shield, 
+  Zap, 
+  Users, 
+  HardDrive, 
+  Wifi, 
+  Code, 
+  Settings, 
+  Webhook, 
+  BarChart3,
+  Lock,
+  Server,
+  Cloud
+} from 'lucide-react'
 
 export const ApiDocs: React.FC = () => {
   const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(apiCategories[0]?.endpoints[0] || null)
@@ -12,14 +30,14 @@ export const ApiDocs: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['auth']))
 
   const categoryIcons = {
-    auth: Shield,
-    database: Database,
-    storage: Globe,
-    realtime: Zap,
-    'edge-functions': Zap,
-    admin: Shield,
-    webhooks: Globe,
-    analytics: Database
+    auth: Users,           // 用户认证 - 用户图标更直观
+    database: Database,    // 数据库操作 - 保持数据库图标
+    storage: HardDrive,    // 存储服务 - 硬盘图标更贴切
+    realtime: Wifi,        // 实时通信 - WiFi图标表示实时连接
+    'edge-functions': Code, // 边缘函数 - 代码图标表示函数
+    admin: Settings,       // 管理接口 - 设置图标表示管理
+    webhooks: Webhook,     // Webhook - 专用的Webhook图标
+    analytics: BarChart3   // 分析统计 - 柱状图图标表示数据分析
   }
 
   const methodColors = {
@@ -71,7 +89,7 @@ export const ApiDocs: React.FC = () => {
             {/* API Categories */}
             <div className="space-y-2">
               {filteredCategories.map((category) => {
-                const IconComponent = categoryIcons[category.id as keyof typeof categoryIcons] || Database
+                const IconComponent = categoryIcons[category.id as keyof typeof categoryIcons] || Server
                 const isExpanded = expandedCategories.has(category.id)
                 
                 return (
@@ -272,7 +290,7 @@ export const ApiDocs: React.FC = () => {
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <Database className="w-16 h-16 text-cyber-gray mx-auto mb-4" />
+                <Globe className="w-16 h-16 text-cyber-gray mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-cyber-light mb-2">选择一个接口</h3>
                 <p className="text-cyber-gray">从左侧导航中选择要查看的API接口</p>
               </div>

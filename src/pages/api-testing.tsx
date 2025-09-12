@@ -18,7 +18,11 @@ import {
   Key,
   Globe,
   Code,
-  Send
+  Send,
+  History,
+  Trash2,
+  X,
+  HelpCircle
 } from 'lucide-react'
 import axios from 'axios'
 
@@ -61,9 +65,11 @@ export const ApiTesting: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(false)
   const [testResponse, setTestResponse] = useState<TestResponse | null>(null)
-  const [testHistory, setTestHistory] = useState<Array<{ request: TestRequest; response: TestResponse; timestamp: Date }>>([])
+  const [testHistory, setTestHistory] = useState<Array<{ id: string; request: TestRequest; response: TestResponse; timestamp: Date }>>([])
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<{ request: TestRequest; response: TestResponse; timestamp: Date } | null>(null)
 
-  // Load config from localStorage on component mount
+  // Load config and history from localStorage on component mount
   useEffect(() => {
     const savedConfig = localStorage.getItem('supabase-api-config')
     if (savedConfig) {
@@ -79,7 +85,25 @@ export const ApiTesting: React.FC = () => {
       // If no config exists, show settings by default
       setShowSettings(true)
     }
+
+    // Load test history from localStorage
+    const savedHistory = localStorage.getItem('supabase-api-test-history')
+    if (savedHistory) {
+      try {
+        const parsedHistory = JSON.parse(savedHistory)
+        // Convert timestamp strings back to Date objects
+        const historyWithDates = parsedHistory.map((item: any) => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        }))
+        setTestHistory(historyWithDates)
+      } catch (error) {
+        console.error('Failed to parse saved history:', error)
+      }
+    }
   }, [])
+
+
 
   // Save config to localStorage whenever it changes
   const saveConfig = (newConfig: TestConfig) => {
@@ -296,12 +320,19 @@ export const ApiTesting: React.FC = () => {
 
       setTestResponse(testResult)
       
-      // Add to history
-      setTestHistory(prev => [{
+      // Add to history with unique ID
+      const historyItem = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         request: { ...testRequest },
         response: testResult,
         timestamp: new Date()
-      }, ...prev.slice(0, 9)]) // Keep last 10 tests
+      }
+      
+      const newHistory = [historyItem, ...testHistory.slice(0, 19)] // Keep last 20 tests
+      setTestHistory(newHistory)
+      
+      // Save to localStorage
+      localStorage.setItem('supabase-api-test-history', JSON.stringify(newHistory))
 
     } catch (error: any) {
       const duration = Date.now() - startTime
@@ -315,9 +346,61 @@ export const ApiTesting: React.FC = () => {
       }
 
       setTestResponse(errorResponse)
+      
+      // Add error to history as well
+      const historyItem = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        request: { ...testRequest },
+        response: errorResponse,
+        timestamp: new Date()
+      }
+      
+      const newHistory = [historyItem, ...testHistory.slice(0, 19)] // Keep last 20 tests
+      setTestHistory(newHistory)
+      
+      // Save to localStorage
+      localStorage.setItem('supabase-api-test-history', JSON.stringify(newHistory))
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Delete history item
+  const deleteHistoryItem = (id: string) => {
+    const newHistory = testHistory.filter(item => item.id !== id)
+    setTestHistory(newHistory)
+    localStorage.setItem('supabase-api-test-history', JSON.stringify(newHistory))
+  }
+
+  // Clear all history
+  const clearAllHistory = () => {
+    setTestHistory([])
+    localStorage.removeItem('supabase-api-test-history')
+    setShowHistoryModal(false)
+  }
+
+  // View history item details
+  const viewHistoryItem = (item: { request: TestRequest; response: TestResponse; timestamp: Date }) => {
+    // 找到对应的分类
+    const category = apiCategories.find(cat => 
+      cat.endpoints.some(ep => ep.id === item.request.endpoint.id)
+    )
+    
+    if (category) {
+      // 先设置分类
+      setSelectedCategory(category.id)
+      
+      // 延迟设置其他状态，确保endpointOptions已经更新
+      setTimeout(() => {
+        setSelectedEndpoint(item.request.endpoint)
+        setTestRequest(item.request)
+        setTestResponse(item.response)
+        setSelectedHistoryItem(item)
+      }, 200)
+    }
+    
+    // 关闭历史弹框
+    setShowHistoryModal(false)
   }
 
   const isConfigValid = config.supabaseUrl && config.apiKey
@@ -390,6 +473,21 @@ export const ApiTesting: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
+        {/* Header with History Button */}
+        <div className="flex items-center justify-end mb-6">
+          {testHistory.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHistoryModal(true)}
+              className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
+            >
+              <History className="w-4 h-4" />
+              <span className="text-sm">测试历史</span>
+            </Button>
+          )}
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Request Configuration */}
           <div className="space-y-6">
@@ -405,6 +503,7 @@ export const ApiTesting: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-cyber-light mb-2">API分类</label>
                   <Select
+                    key={`category-${selectedCategory}`}
                     options={categoryOptions}
                     value={selectedCategory}
                     onValueChange={handleCategoryChange}
@@ -415,6 +514,7 @@ export const ApiTesting: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-cyber-light mb-2">接口</label>
                   <Select
+                    key={`endpoint-${selectedCategory}-${selectedEndpoint?.id || 'none'}`}
                     options={endpointOptions}
                     value={selectedEndpoint?.id || ''}
                     onValueChange={handleEndpointChange}
@@ -436,25 +536,33 @@ export const ApiTesting: React.FC = () => {
                           <span className="text-xs text-cyber-gray">请求URL:</span>
                           <code className="block text-neon-green text-sm break-all">{buildRequestUrl()}</code>
                         </div>
-                        {selectedEndpoint.path.includes('/rest/v1/') && (
-                          <div className="text-xs text-cyber-gray border-t border-dark-border pt-2">
-                            <div className="mb-1 font-medium">常用参数示例:</div>
-                            <div className="space-y-1">
-                              <div>• select: id,name,email (选择字段)</div>
-                              <div>• limit: 10 (限制数量)</div>
-                              <div>• offset: 20 (跳过记录)</div>
-                              <div>• order: created_at.desc (排序)</div>
-                              <div>• filter: name=eq.John 或直接用列名: name=eq.John</div>
-                            </div>
-                          </div>
-                        )}
+
                       </div>
                     </div>
 
                     {/* Parameters */}
                     {selectedEndpoint.parameters && selectedEndpoint.parameters.length > 0 && (
                       <div>
-                        <label className="block text-sm font-medium text-cyber-light mb-2">参数</label>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <label className="text-sm font-medium text-cyber-light">参数</label>
+                          {selectedEndpoint.path.includes('/rest/v1/') && (
+                            <div className="relative group">
+                              <HelpCircle className="w-4 h-4 text-cyber-gray hover:text-neon-green cursor-help" />
+                              <div className="absolute left-0 top-6 hidden group-hover:block z-10 bg-dark-surface border border-dark-border rounded-lg p-3 shadow-lg min-w-[300px]">
+                                <div className="text-xs text-cyber-gray border-t border-dark-border pt-2">
+                                  <div className="mb-1 font-medium">常用参数示例:</div>
+                                  <div className="space-y-1">
+                                    <div>• select: id,name,email (选择字段)</div>
+                                    <div>• limit: 10 (限制数量)</div>
+                                    <div>• offset: 20 (跳过记录)</div>
+                                    <div>• order: created_at.desc (排序)</div>
+                                    <div>• filter: name=eq.John 或直接用列名: name=eq.John</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <div className="space-y-3">
                           {selectedEndpoint.parameters.map((param) => {
                             const currentValue = testRequest.parameters[param.name] || ''
@@ -589,43 +697,105 @@ export const ApiTesting: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Test History */}
-            {testHistory.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>测试历史</CardTitle>
-                  <CardDescription>最近的测试记录</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {testHistory.map((test, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-dark-surface rounded-lg border border-dark-border hover:border-neon-green/30 transition-colors cursor-pointer"
-                        onClick={() => setTestResponse(test.response)}
+
+          </div>
+        </div>
+      </div>
+
+      {/* History Modal */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-lg border border-dark-border w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <div className="flex items-center space-x-2">
+                <History className="w-5 h-5 text-neon-green" />
+                <h2 className="text-xl font-bold text-cyber-light">测试历史</h2>
+                <Badge variant="info" className="text-xs">
+                  {testHistory.length} 条记录
+                </Badge>
+              </div>
+              <div className="flex items-center space-x-2">
+                {testHistory.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllHistory}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    清空全部
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowHistoryModal(false)}
+                  className="text-cyber-light hover:text-neon-green"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+              {testHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <History className="w-12 h-12 text-cyber-gray mx-auto mb-4" />
+                  <p className="text-cyber-gray">暂无测试历史记录</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {testHistory.map((test) => (
+                    <div
+                      key={test.id}
+                      className="flex items-center justify-between p-4 bg-dark-bg rounded-lg border border-dark-border hover:border-neon-green/30 transition-colors"
+                    >
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => viewHistoryItem(test)}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 mb-2">
                           <Badge 
                             variant={test.response.status >= 200 && test.response.status < 300 ? 'success' : 'error'}
                             className="text-xs"
                           >
                             {test.request.endpoint.method}
                           </Badge>
-                          <span className="text-cyber-light text-sm">{test.request.endpoint.name}</span>
+                          <span className="text-cyber-light font-medium">{test.request.endpoint.name}</span>
+                          <Badge 
+                            variant={test.response.status >= 200 && test.response.status < 300 ? 'success' : 'error'}
+                            className="text-xs"
+                          >
+                            {test.response.status}
+                          </Badge>
                         </div>
-                        <div className="flex items-center space-x-2 text-xs text-cyber-gray">
-                          <span>{test.response.status}</span>
-                          <span>{test.timestamp.toLocaleTimeString()}</span>
+                        <div className="text-xs text-cyber-gray space-y-1">
+                          <div>时间: {test.timestamp.toLocaleString()}</div>
+                          <div>耗时: {test.response.duration}ms</div>
+                          {Object.keys(test.request.parameters).length > 0 && (
+                            <div>参数: {Object.entries(test.request.parameters).map(([k, v]) => `${k}=${v}`).join(', ')}</div>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteHistoryItem(test.id)
+                        }}
+                        className="text-red-400 hover:text-red-300 ml-4"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
