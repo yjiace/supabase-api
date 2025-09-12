@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { CodeBlock } from '@/components/ui/code-block'
+import { JsonEditor } from '@/components/ui/json-editor'
 import { apiCategories, ApiEndpoint } from '@/data/api-docs'
 import { 
   Settings, 
@@ -134,22 +135,82 @@ export const ApiTesting: React.FC = () => {
     }))
   }
 
+  // Validate Supabase filter parameter format
+  const validateFilterParameter = (value: string): { isValid: boolean; error?: string } => {
+    if (!value) return { isValid: true }
+    
+    // Check if it's a valid Supabase filter format: column=operator.value
+    const filterRegex = /^[a-zA-Z_][a-zA-Z0-9_]*=(eq|neq|gt|gte|lt|lte|like|ilike|match|imatch|in|is|fts|plfts|phfts|wfts)\..+$/
+    const simpleFilterRegex = /^[a-zA-Z_][a-zA-Z0-9_]*=(eq|neq|gt|gte|lt|lte|like|ilike|is)\.[^=]*$/
+    
+    if (filterRegex.test(value) || simpleFilterRegex.test(value)) {
+      return { isValid: true }
+    }
+    
+    return { 
+      isValid: false, 
+      error: '过滤器格式应为: column=operator.value (如: name=eq.John, age=gt.18)' 
+    }
+  }
+
   const buildRequestUrl = () => {
     if (!selectedEndpoint || !config.supabaseUrl) return ''
     
     let url = config.supabaseUrl.replace(/\/$/, '') + selectedEndpoint.path
     
-    // Replace path parameters
+    // Replace path parameters (parameters that appear in the URL path with {})
     Object.entries(testRequest.parameters).forEach(([key, value]) => {
-      url = url.replace(`{${key}}`, value)
+      if (value && selectedEndpoint.path.includes(`{${key}}`)) {
+        url = url.replace(`{${key}}`, encodeURIComponent(value))
+      }
     })
     
-    // Add query parameters for GET requests
-    if (selectedEndpoint.method === 'GET') {
+    // Add query parameters for GET, PATCH, DELETE requests (Supabase REST API)
+    if (['GET', 'PATCH', 'DELETE'].includes(selectedEndpoint.method)) {
       const queryParams = new URLSearchParams()
+      
       Object.entries(testRequest.parameters).forEach(([key, value]) => {
         if (value && !selectedEndpoint.path.includes(`{${key}}`)) {
-          queryParams.append(key, value)
+          // Handle special Supabase parameters
+          if (key === 'filter') {
+            // Filter parameter should be in format: column=operator.value
+            // Split by first '=' to get column name and operator.value
+            const filterParts = value.split('=')
+            if (filterParts.length >= 2) {
+              const columnName = filterParts[0].trim()
+              const operatorValue = filterParts.slice(1).join('=').trim() // Handle cases where value contains '='
+              queryParams.append(columnName, operatorValue)
+            }
+          } else if (['select', 'order', 'limit', 'offset', 'range', 'prefer'].includes(key)) {
+            // Standard Supabase query parameters
+            queryParams.append(key, value)
+          } else {
+            // Check if this is a column filter (contains Supabase operators)
+            const supabaseOperators = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'match', 'imatch', 'in', 'is', 'fts', 'plfts', 'phfts', 'wfts', 'not']
+            const hasOperator = supabaseOperators.some(op => value.startsWith(`${op}.`))
+            
+            if (hasOperator) {
+              // This is a column filter: column_name=operator.value
+              queryParams.append(key, value)
+            } else if (value.includes('=') && value.split('=').length >= 2) {
+              // This might be a filter parameter in format: column=operator.value
+              const filterParts = value.split('=')
+              const columnName = filterParts[0].trim()
+              const operatorValue = filterParts.slice(1).join('=').trim()
+              
+              // Validate if it looks like a Supabase filter
+              const operatorPart = operatorValue.split('.')[0]
+              if (supabaseOperators.includes(operatorPart)) {
+                queryParams.append(columnName, operatorValue)
+              } else {
+                // Regular parameter
+                queryParams.append(key, value)
+              }
+            } else {
+              // Regular parameter
+              queryParams.append(key, value)
+            }
+          }
         }
       })
       
@@ -165,6 +226,34 @@ export const ApiTesting: React.FC = () => {
   const executeTest = async () => {
     if (!selectedEndpoint || !config.supabaseUrl || !config.apiKey) {
       alert('请先配置Supabase URL和API Key')
+      return
+    }
+
+    // Validate parameters before sending request
+    const parameterErrors: string[] = []
+    if (selectedEndpoint.parameters) {
+      selectedEndpoint.parameters.forEach(param => {
+        const value = testRequest.parameters[param.name] || ''
+        
+        // Check required parameters
+        if (param.required && !value) {
+          parameterErrors.push(`参数 "${param.name}" 是必需的`)
+        }
+        
+        // Validate filter parameters
+        if (value && (param.name === 'filter' || param.description.includes('过滤条件'))) {
+          const validation = validateFilterParameter(value)
+          if (!validation.isValid && validation.error) {
+            parameterErrors.push(`参数 "${param.name}": ${validation.error}`)
+          }
+        }
+      })
+    }
+
+    if (parameterErrors.length > 0) {
+      alert('参数验证失败:\
+' + parameterErrors.join('\
+'))
       return
     }
 
@@ -342,7 +431,24 @@ export const ApiTesting: React.FC = () => {
                         </Badge>
                         <span className="text-cyber-light font-medium">{selectedEndpoint.name}</span>
                       </div>
-                      <code className="text-neon-green text-sm">{buildRequestUrl()}</code>
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-xs text-cyber-gray">请求URL:</span>
+                          <code className="block text-neon-green text-sm break-all">{buildRequestUrl()}</code>
+                        </div>
+                        {selectedEndpoint.path.includes('/rest/v1/') && (
+                          <div className="text-xs text-cyber-gray border-t border-dark-border pt-2">
+                            <div className="mb-1 font-medium">常用参数示例:</div>
+                            <div className="space-y-1">
+                              <div>• select: id,name,email (选择字段)</div>
+                              <div>• limit: 10 (限制数量)</div>
+                              <div>• offset: 20 (跳过记录)</div>
+                              <div>• order: created_at.desc (排序)</div>
+                              <div>• filter: name=eq.John 或直接用列名: name=eq.John</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Parameters */}
@@ -350,35 +456,54 @@ export const ApiTesting: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-cyber-light mb-2">参数</label>
                         <div className="space-y-3">
-                          {selectedEndpoint.parameters.map((param) => (
-                            <div key={param.name}>
-                              <label className="block text-xs text-cyber-gray mb-1">
-                                {param.name} 
-                                {param.required && <span className="text-red-400 ml-1">*</span>}
-                                <span className="ml-2 text-cyber-gray">({param.type})</span>
-                              </label>
-                              <Input
-                                placeholder={param.example || param.description}
-                                value={testRequest.parameters[param.name] || ''}
-                                onChange={(e) => handleParameterChange(param.name, e.target.value)}
-                              />
-                            </div>
-                          ))}
+                          {selectedEndpoint.parameters.map((param) => {
+                            const currentValue = testRequest.parameters[param.name] || ''
+                            const isFilterParam = param.name === 'filter' || param.description.includes('过滤条件')
+                            const validation = isFilterParam ? validateFilterParameter(currentValue) : { isValid: true }
+                            
+                            return (
+                              <div key={param.name}>
+                                <label className="block text-xs text-cyber-gray mb-1">
+                                  {param.name} 
+                                  {param.required && <span className="text-red-400 ml-1">*</span>}
+                                  <span className="ml-2 text-cyber-gray">({param.type})</span>
+                                </label>
+                                <Input
+                                  placeholder={param.example || param.description}
+                                  value={currentValue}
+                                  onChange={(e) => handleParameterChange(param.name, e.target.value)}
+                                  className={!validation.isValid ? 'border-red-500 focus:border-red-500' : ''}
+                                />
+                                {isFilterParam && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    格式: column=operator.value (如: name=eq.John, age=gt.18, status=in.(active,pending))
+                                  </div>
+                                )}
+                                {!validation.isValid && validation.error && (
+                                  <div className="mt-1 text-xs text-red-400">
+                                    {validation.error}
+                                  </div>
+                                )}
+                                {param.description && !isFilterParam && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    {param.description}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     )}
 
                     {/* Request Body */}
                     {['POST', 'PUT', 'PATCH'].includes(selectedEndpoint.method) && (
-                      <div>
-                        <label className="block text-sm font-medium text-cyber-light mb-2">请求体 (JSON)</label>
-                        <Textarea
-                          rows={8}
-                          value={testRequest.requestBody}
-                          onChange={(e) => setTestRequest(prev => ({ ...prev, requestBody: e.target.value }))}
-                          className="font-mono text-sm"
-                        />
-                      </div>
+                      <JsonEditor
+                        value={testRequest.requestBody}
+                        onChange={(value) => setTestRequest(prev => ({ ...prev, requestBody: value }))}
+                        rows={8}
+                        placeholder="{}"
+                      />
                     )}
 
                     <Button
