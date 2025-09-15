@@ -22,13 +22,17 @@ import {
   History,
   Trash2,
   X,
-  HelpCircle
+  HelpCircle,
+  Shield,
+  AlertTriangle,
+  Info
 } from 'lucide-react'
 import axios from 'axios'
 
 interface TestConfig {
   supabaseUrl: string
   apiKey: string
+  serviceRoleKey?: string
 }
 
 interface TestRequest {
@@ -50,7 +54,8 @@ interface TestResponse {
 export const ApiTesting: React.FC = () => {
   const [config, setConfig] = useState<TestConfig>({
     supabaseUrl: '',
-    apiKey: ''
+    apiKey: '',
+    serviceRoleKey: ''
   })
   
   const [showSettings, setShowSettings] = useState(false)
@@ -68,6 +73,88 @@ export const ApiTesting: React.FC = () => {
   const [testHistory, setTestHistory] = useState<Array<{ id: string; request: TestRequest; response: TestResponse; timestamp: Date }>>([])
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<{ request: TestRequest; response: TestResponse; timestamp: Date } | null>(null)
+  const [tempServiceKey, setTempServiceKey] = useState('')
+  const [showTempServiceKeyInput, setShowTempServiceKeyInput] = useState(false)
+
+  // 根据接口路径和功能判断所需的密钥类型
+  const getRequiredKeyType = (endpoint: ApiEndpoint): 'anon' | 'service_role' | 'both' => {
+    const path = endpoint.path.toLowerCase()
+    const name = endpoint.name.toLowerCase()
+    const description = endpoint.description.toLowerCase()
+    
+    // 管理员操作需要服务密钥
+    if (path.includes('/admin/') || 
+        name.includes('管理') || 
+        name.includes('删除用户') ||
+        name.includes('重置密码') ||
+        description.includes('管理员') ||
+        description.includes('服务端') ||
+        endpoint.method === 'DELETE' && path.includes('/auth/')) {
+      return 'service_role'
+    }
+    
+    // 数据库函数、扩展、迁移等通常需要服务密钥
+    if (path.includes('/rpc/') && (name.includes('系统') || description.includes('管理'))) {
+      return 'service_role'
+    }
+    
+    // 用户认证相关的大部分操作可以用匿名密钥
+    if (path.includes('/auth/') && !name.includes('管理')) {
+      return 'anon'
+    }
+    
+    // 数据库操作通常两种密钥都可以，但有RLS保护
+    if (path.includes('/rest/v1/')) {
+      return 'both'
+    }
+    
+    // 存储操作通常用匿名密钥
+    if (path.includes('/storage/')) {
+      return 'anon'
+    }
+    
+    // 实时订阅用匿名密钥
+    if (path.includes('/realtime/')) {
+      return 'anon'
+    }
+    
+    // 边缘函数调用用匿名密钥
+    if (path.includes('/functions/')) {
+      return 'anon'
+    }
+    
+    // 默认返回both
+    return 'both'
+  }
+
+  const getKeyTypeInfo = (keyType: 'anon' | 'service_role' | 'both') => {
+    switch (keyType) {
+      case 'anon':
+        return {
+          label: '匿名密钥 (anon key)',
+          color: 'success',
+          icon: Key,
+          description: '客户端安全，受RLS保护',
+          warning: null
+        }
+      case 'service_role':
+        return {
+          label: '服务密钥 (service_role key)',
+          color: 'error',
+          icon: Shield,
+          description: '服务端专用，完全访问权限',
+          warning: '⚠️ 此接口需要服务密钥，请确保在服务端环境中使用'
+        }
+      case 'both':
+        return {
+          label: '两种密钥均可',
+          color: 'warning',
+          icon: Key,
+          description: '匿名密钥或服务密钥均可使用',
+          warning: null
+        }
+    }
+  }
 
   // Load config and history from localStorage on component mount
   useEffect(() => {
@@ -135,14 +222,27 @@ export const ApiTesting: React.FC = () => {
     
     if (endpoint) {
       setSelectedEndpoint(endpoint)
+      
+      // 根据接口需求选择合适的密钥
+      const keyType = getRequiredKeyType(endpoint)
+      let selectedKey = config.apiKey
+      
+      if (keyType === 'service_role' && config.serviceRoleKey) {
+        selectedKey = config.serviceRoleKey
+      } else if (keyType === 'service_role' && !config.serviceRoleKey) {
+        setShowTempServiceKeyInput(true)
+      } else {
+        setShowTempServiceKeyInput(false)
+      }
+      
       setTestRequest({
         endpoint,
         parameters: {},
         requestBody: endpoint.requestBody?.example ? JSON.stringify(endpoint.requestBody.example, null, 2) : '{}',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': config.apiKey,
-          'Authorization': `Bearer ${config.apiKey}`
+          'apikey': selectedKey,
+          'Authorization': `Bearer ${selectedKey}`
         }
       })
       setTestResponse(null)
@@ -248,8 +348,26 @@ export const ApiTesting: React.FC = () => {
   }
 
   const executeTest = async () => {
-    if (!selectedEndpoint || !config.supabaseUrl || !config.apiKey) {
-      alert('请先配置Supabase URL和API Key')
+    if (!selectedEndpoint || !config.supabaseUrl) {
+      alert('请先配置Supabase URL')
+      return
+    }
+
+    // 检查密钥配置
+    const keyType = getRequiredKeyType(selectedEndpoint)
+    let currentApiKey = config.apiKey
+
+    if (keyType === 'service_role') {
+      if (config.serviceRoleKey) {
+        currentApiKey = config.serviceRoleKey
+      } else if (tempServiceKey) {
+        currentApiKey = tempServiceKey
+      } else {
+        alert('此接口需要服务端密钥，请在设置中配置或使用临时密钥输入框')
+        return
+      }
+    } else if (!config.apiKey) {
+      alert('请先配置API Key')
       return
     }
 
@@ -288,8 +406,8 @@ export const ApiTesting: React.FC = () => {
       const url = buildRequestUrl()
       const headers = {
         ...testRequest.headers,
-        'apikey': config.apiKey,
-        'Authorization': `Bearer ${config.apiKey}`
+        'apikey': currentApiKey,
+        'Authorization': `Bearer ${currentApiKey}`
       }
 
       let requestData = undefined
@@ -405,6 +523,17 @@ export const ApiTesting: React.FC = () => {
 
   const isConfigValid = config.supabaseUrl && config.apiKey
 
+  // 检查当前选择的接口是否有足够的密钥配置
+  const hasRequiredKey = () => {
+    if (!selectedEndpoint) return true
+    
+    const keyType = getRequiredKeyType(selectedEndpoint)
+    if (keyType === 'service_role') {
+      return config.serviceRoleKey || tempServiceKey || showTempServiceKeyInput
+    }
+    return config.apiKey
+  }
+
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
       {/* Header Panel */}
@@ -443,7 +572,7 @@ export const ApiTesting: React.FC = () => {
 
           {/* Configuration Panel - Conditionally Rendered */}
           {showSettings && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
               <div>
                 <label className="block text-sm font-medium text-cyber-light mb-2">
                   <Globe className="w-4 h-4 inline mr-2" />
@@ -458,7 +587,7 @@ export const ApiTesting: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-cyber-light mb-2">
                   <Key className="w-4 h-4 inline mr-2" />
-                  API Key
+                  匿名密钥 (Anon Key)
                 </label>
                 <Input
                   type="password"
@@ -466,6 +595,31 @@ export const ApiTesting: React.FC = () => {
                   value={config.apiKey}
                   onChange={(e) => saveConfig({ ...config, apiKey: e.target.value })}
                 />
+                <div className="mt-2 text-xs text-cyber-gray">
+                  <div className="flex items-center space-x-1">
+                    <Key className="w-3 h-3 text-neon-green" />
+                    <span>客户端安全，适用于大部分操作</span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-cyber-light mb-2">
+                  <Shield className="w-4 h-4 inline mr-2" />
+                  服务端密钥 (Service Role Key)
+                  <span className="text-xs text-cyber-gray ml-1">(可选)</span>
+                </label>
+                <Input
+                  type="password"
+                  placeholder="your-service-role-key (可选)"
+                  value={config.serviceRoleKey || ''}
+                  onChange={(e) => saveConfig({ ...config, serviceRoleKey: e.target.value })}
+                />
+                <div className="mt-2 text-xs text-cyber-gray">
+                  <div className="flex items-center space-x-1">
+                    <Shield className="w-3 h-3 text-red-400" />
+                    <span>服务端专用，管理员操作必需</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -531,12 +685,44 @@ export const ApiTesting: React.FC = () => {
                         </Badge>
                         <span className="text-cyber-light font-medium">{selectedEndpoint.name}</span>
                       </div>
+                      
+                      {/* API Key Requirement */}
+                      {(() => {
+                        const keyType = getRequiredKeyType(selectedEndpoint)
+                        const keyInfo = getKeyTypeInfo(keyType)
+                        const IconComponent = keyInfo.icon
+                        
+                        return (
+                          <div className="mb-3">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <IconComponent className="w-4 h-4 text-cyber-gray" />
+                              <span className="text-xs text-cyber-gray">所需密钥:</span>
+                              <Badge variant={keyInfo.color as "success" | "error" | "warning" | "default" | "info"} className="flex items-center space-x-1 text-xs">
+                                <IconComponent className="w-3 h-3" />
+                                <span>{keyInfo.label}</span>
+                              </Badge>
+                            </div>
+                            {keyInfo.warning && (
+                              <div className="flex items-start space-x-2 mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-300">
+                                <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                <span>{keyInfo.warning}</span>
+                              </div>
+                            )}
+                            {keyType === 'both' && (
+                              <div className="flex items-start space-x-2 mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
+                                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                <span>此接口支持匿名密钥和服务密钥。使用匿名密钥时受RLS策略保护，使用服务密钥时拥有完全访问权限。</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
+                      
                       <div className="space-y-2">
                         <div>
                           <span className="text-xs text-cyber-gray">请求URL:</span>
                           <code className="block text-neon-green text-sm break-all">{buildRequestUrl()}</code>
                         </div>
-
                       </div>
                     </div>
 
@@ -614,9 +800,75 @@ export const ApiTesting: React.FC = () => {
                       />
                     )}
 
+                    {/* Temporary Service Key Input */}
+                    {showTempServiceKeyInput && (
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <AlertTriangle className="w-4 h-4 text-red-400" />
+                          <span className="text-sm font-medium text-red-400">需要服务端密钥</span>
+                        </div>
+                        <p className="text-xs text-red-300 mb-3">
+                          此接口需要服务端密钥才能访问。您可以在设置中配置服务端密钥，或在下方临时输入：
+                        </p>
+                        <div>
+                          <label className="block text-xs font-medium text-cyber-light mb-2">
+                            <Shield className="w-3 h-3 inline mr-1" />
+                            临时服务端密钥
+                          </label>
+                          <Input
+                            type="password"
+                            placeholder="输入服务端密钥进行测试"
+                            value={tempServiceKey}
+                            onChange={(e) => {
+                              setTempServiceKey(e.target.value)
+                              // 更新请求头中的密钥
+                              if (selectedEndpoint) {
+                                setTestRequest(prev => ({
+                                  ...prev,
+                                  headers: {
+                                    ...prev.headers,
+                                    'apikey': e.target.value,
+                                    'Authorization': `Bearer ${e.target.value}`
+                                  }
+                                }))
+                              }
+                            }}
+                            className="text-sm"
+                          />
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-cyber-gray">
+                              ⚠️ 仅用于测试，请勿在生产环境的客户端使用
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setShowTempServiceKeyInput(false)
+                                setTempServiceKey('')
+                                // 恢复使用匿名密钥
+                                if (selectedEndpoint) {
+                                  setTestRequest(prev => ({
+                                    ...prev,
+                                    headers: {
+                                      ...prev.headers,
+                                      'apikey': config.apiKey,
+                                      'Authorization': `Bearer ${config.apiKey}`
+                                    }
+                                  }))
+                                }
+                              }}
+                              className="text-xs text-cyber-gray hover:text-cyber-light"
+                            >
+                              取消
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <Button
                       onClick={executeTest}
-                      disabled={!isConfigValid || isLoading}
+                      disabled={!isConfigValid || isLoading || !hasRequiredKey()}
                       className="w-full"
                       variant="cyber"
                     >

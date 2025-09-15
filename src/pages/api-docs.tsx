@@ -32,7 +32,9 @@ import {
   Puzzle,
   History,
   FolderOpen,
-  ExternalLink
+  ExternalLink,
+  Key,
+  AlertTriangle
 } from 'lucide-react'
 
 export const ApiDocs: React.FC = () => {
@@ -69,8 +71,87 @@ export const ApiDocs: React.FC = () => {
     PUT: 'warning',
     PATCH: 'warning',
     DELETE: 'error',
+    HEAD: 'success',
+    OPTIONS: 'info',
     WebSocket: 'info'
   } as const
+
+  // 根据接口路径和功能判断所需的密钥类型
+  const getRequiredKeyType = (endpoint: ApiEndpoint): 'anon' | 'service_role' | 'both' => {
+    const path = endpoint.path.toLowerCase()
+    const name = endpoint.name.toLowerCase()
+    const description = endpoint.description.toLowerCase()
+    
+    // 管理员操作需要服务密钥
+    if (path.includes('/admin/') || 
+        name.includes('管理') || 
+        name.includes('删除用户') ||
+        name.includes('重置密码') ||
+        description.includes('管理员') ||
+        description.includes('服务端') ||
+        endpoint.method === 'DELETE' && path.includes('/auth/')) {
+      return 'service_role'
+    }
+    
+    // 数据库函数、扩展、迁移等通常需要服务密钥
+    if (path.includes('/rpc/') && (name.includes('系统') || description.includes('管理'))) {
+      return 'service_role'
+    }
+    
+    // 用户认证相关的大部分操作可以用匿名密钥
+    if (path.includes('/auth/') && !name.includes('管理')) {
+      return 'anon'
+    }
+    
+    // 数据库操作通常两种密钥都可以，但有RLS保护
+    if (path.includes('/rest/v1/')) {
+      return 'both'
+    }
+    
+    // 存储操作通常用匿名密钥
+    if (path.includes('/storage/')) {
+      return 'anon'
+    }
+    
+    // 实时订阅用匿名密钥
+    if (path.includes('/realtime/')) {
+      return 'anon'
+    }
+    
+    // 边缘函数调用用匿名密钥
+    if (path.includes('/functions/')) {
+      return 'anon'
+    }
+    
+    // 默认返回both
+    return 'both'
+  }
+
+  const getKeyTypeInfo = (keyType: 'anon' | 'service_role' | 'both') => {
+    switch (keyType) {
+      case 'anon':
+        return {
+          label: '匿名密钥',
+          color: 'success',
+          icon: Key,
+          description: '客户端安全，受RLS保护'
+        }
+      case 'service_role':
+        return {
+          label: '服务密钥',
+          color: 'error',
+          icon: Shield,
+          description: '服务端专用，完全访问权限'
+        }
+      case 'both':
+        return {
+          label: '两种密钥',
+          color: 'warning',
+          icon: Key,
+          description: '匿名密钥或服务密钥均可'
+        }
+    }
+  }
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
@@ -213,6 +294,34 @@ export const ApiDocs: React.FC = () => {
                       </a>
                     )}
                   </div>
+                  
+                  {/* API Key Requirement */}
+                  {(() => {
+                    const keyType = getRequiredKeyType(selectedEndpoint)
+                    const keyInfo = getKeyTypeInfo(keyType)
+                    const IconComponent = keyInfo.icon
+                    
+                    return (
+                      <div className="flex items-center space-x-4 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className="w-4 h-4 text-cyber-gray" />
+                          <span className="text-sm text-cyber-gray">所需密钥:</span>
+                        </div>
+                        <Badge variant={keyInfo.color as "success" | "error" | "warning" | "default" | "info"} className="flex items-center space-x-1">
+                          <IconComponent className="w-3 h-3" />
+                          <span>{keyInfo.label}</span>
+                        </Badge>
+                        <span className="text-xs text-cyber-gray">{keyInfo.description}</span>
+                        {keyType === 'service_role' && (
+                          <div className="flex items-center space-x-1 text-red-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span className="text-xs">仅服务端使用</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                  
                   <p className="text-lg text-cyber-gray mb-4">{selectedEndpoint.description}</p>
                   <div className="bg-dark-surface rounded-lg p-4 border border-dark-border">
                     <code className="text-neon-green font-mono">
