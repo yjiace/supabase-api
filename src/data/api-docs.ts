@@ -1782,5 +1782,941 @@ Content-Type: application/json`
         ]
       }
     ]
+  },
+  {
+    id: 'realtime',
+    name: '实时订阅',
+    description: 'Supabase Realtime - WebSocket实时数据订阅',
+    officialDocs: 'https://supabase.com/docs/guides/realtime',
+    endpoints: [
+      {
+        id: 'realtime-websocket',
+        name: 'WebSocket连接',
+        method: 'WebSocket',
+        path: '/realtime/v1/websocket',
+        description: '建立WebSocket连接进行实时数据订阅',
+        officialDocs: 'https://supabase.com/docs/guides/realtime/quickstart',
+        parameters: [
+          {
+            name: 'apikey',
+            type: 'string',
+            required: true,
+            description: 'Supabase API密钥',
+            example: 'YOUR_SUPABASE_ANON_KEY'
+          },
+          {
+            name: 'vsn',
+            type: 'string',
+            required: true,
+            description: '协议版本',
+            example: '1.0.0'
+          }
+        ],
+        responses: [
+          {
+            status: 101,
+            description: 'WebSocket连接建立成功'
+          }
+        ],
+        examples: [
+          {
+            title: '建立WebSocket连接',
+            description: '连接到Supabase实时服务',
+            request: `// JavaScript WebSocket连接示例
+const socket = new WebSocket(
+  'wss://your-project.supabase.co/realtime/v1/websocket?apikey=YOUR_SUPABASE_ANON_KEY&vsn=1.0.0'
+)
+
+socket.onopen = () => {
+  console.log('WebSocket连接已建立')
+}`,
+            response: `// WebSocket连接成功建立`
+          }
+        ]
+      },
+      {
+        id: 'realtime-subscribe-table',
+        name: '订阅表变化',
+        method: 'WebSocket',
+        path: '/realtime/v1/websocket',
+        description: '订阅数据库表的实时变化（INSERT、UPDATE、DELETE）',
+        officialDocs: 'https://supabase.com/docs/guides/realtime/postgres-changes',
+        examples: [
+          {
+            title: '订阅表变化',
+            description: '监听users表的所有变化',
+            request: `// 通过WebSocket发送订阅消息
+const subscribeMessage = {
+  topic: 'realtime:public:users',
+  event: 'phx_join',
+  payload: {
+    config: {
+      postgres_changes: [
+        {
+          event: '*',
+          schema: 'public',
+          table: 'users'
+        }
+      ]
+    }
+  },
+  ref: '1'
+}
+
+socket.send(JSON.stringify(subscribeMessage))`,
+            response: `{
+  "event": "postgres_changes",
+  "payload": {
+    "data": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com"
+    },
+    "eventType": "INSERT",
+    "schema": "public",
+    "table": "users",
+    "commit_timestamp": "2023-01-01T00:00:00.000Z"
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'realtime-subscribe-broadcast',
+        name: '订阅广播消息',
+        method: 'WebSocket',
+        path: '/realtime/v1/websocket',
+        description: '订阅自定义广播消息',
+        officialDocs: 'https://supabase.com/docs/guides/realtime/broadcast',
+        examples: [
+          {
+            title: '订阅广播频道',
+            description: '监听自定义广播消息',
+            request: `// 订阅广播频道
+const subscribeMessage = {
+  topic: 'realtime:chat-room',
+  event: 'phx_join',
+  payload: {
+    config: {
+      broadcast: { self: true }
+    }
+  },
+  ref: '1'
+}
+
+socket.send(JSON.stringify(subscribeMessage))
+
+// 发送广播消息
+const broadcastMessage = {
+  topic: 'realtime:chat-room',
+  event: 'broadcast',
+  payload: {
+    type: 'broadcast',
+    event: 'message',
+    payload: {
+      user: 'John',
+      message: 'Hello everyone!'
+    }
+  },
+  ref: '2'
+}
+
+socket.send(JSON.stringify(broadcastMessage))`,
+            response: `{
+  "event": "broadcast",
+  "payload": {
+    "event": "message",
+    "payload": {
+      "user": "John",
+      "message": "Hello everyone!"
+    }
+  }
+}`
+          }
+        ]
+      },
+      {
+        id: 'realtime-subscribe-presence',
+        name: '订阅在线状态',
+        method: 'WebSocket',
+        path: '/realtime/v1/websocket',
+        description: '订阅用户在线状态变化',
+        officialDocs: 'https://supabase.com/docs/guides/realtime/presence',
+        examples: [
+          {
+            title: '订阅在线状态',
+            description: '监听用户上线/下线状态',
+            request: `// 订阅在线状态频道
+const subscribeMessage = {
+  topic: 'realtime:online-users',
+  event: 'phx_join',
+  payload: {
+    config: {
+      presence: { key: 'user_id' }
+    }
+  },
+  ref: '1'
+}
+
+socket.send(JSON.stringify(subscribeMessage))
+
+// 跟踪用户在线状态
+const trackMessage = {
+  topic: 'realtime:online-users',
+  event: 'presence',
+  payload: {
+    type: 'presence',
+    event: 'track',
+    payload: {
+      user_id: '123',
+      name: 'John Doe',
+      status: 'online'
+    }
+  },
+  ref: '2'
+}
+
+socket.send(JSON.stringify(trackMessage))`,
+            response: `{
+  "event": "presence_state",
+  "payload": {
+    "123": {
+      "metas": [
+        {
+          "user_id": "123",
+          "name": "John Doe",
+          "status": "online",
+          "phx_ref": "abc123"
+        }
+      ]
+    }
+  }
+}`
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'management',
+    name: '管理API',
+    description: 'Supabase Management API - 项目和资源管理',
+    officialDocs: 'https://supabase.com/docs/reference/api/management-api',
+    endpoints: [
+      {
+        id: 'mgmt-list-projects',
+        name: '列出项目',
+        method: 'GET',
+        path: '/v1/projects',
+        description: '获取用户的所有项目列表',
+        officialDocs: 'https://supabase.com/docs/reference/api/management-api#list-all-projects',
+        responses: [
+          {
+            status: 200,
+            description: '项目列表获取成功',
+            example: [
+              {
+                id: 'abc123def456',
+                name: 'My Project',
+                organization_id: 'org_123',
+                region: 'us-east-1',
+                created_at: '2023-01-01T00:00:00.000Z',
+                status: 'ACTIVE_HEALTHY'
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '获取项目列表',
+            description: '列出用户账户下的所有项目',
+            request: `curl -X GET 'https://api.supabase.com/v1/projects' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "id": "abc123def456",
+    "name": "My Project",
+    "organization_id": "org_123",
+    "region": "us-east-1",
+    "created_at": "2023-01-01T00:00:00.000Z",
+    "status": "ACTIVE_HEALTHY"
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'mgmt-get-project',
+        name: '获取项目详情',
+        method: 'GET',
+        path: '/v1/projects/{project_id}',
+        description: '获取指定项目的详细信息',
+        officialDocs: 'https://supabase.com/docs/reference/api/management-api#retrieve-a-project',
+        parameters: [
+          {
+            name: 'project_id',
+            type: 'string',
+            required: true,
+            description: '项目ID',
+            example: 'abc123def456'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '项目详情获取成功',
+            example: {
+              id: 'abc123def456',
+              name: 'My Project',
+              organization_id: 'org_123',
+              region: 'us-east-1',
+              database: {
+                host: 'db.abc123def456.supabase.co',
+                version: '15.1.0.147'
+              },
+              status: 'ACTIVE_HEALTHY'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '获取项目详情',
+            description: '获取指定项目的完整信息',
+            request: `curl -X GET 'https://api.supabase.com/v1/projects/abc123def456' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `{
+  "id": "abc123def456",
+  "name": "My Project",
+  "organization_id": "org_123",
+  "region": "us-east-1",
+  "database": {
+    "host": "db.abc123def456.supabase.co",
+    "version": "15.1.0.147"
+  },
+  "status": "ACTIVE_HEALTHY"
+}`
+          }
+        ]
+      },
+      {
+        id: 'mgmt-create-project',
+        name: '创建项目',
+        method: 'POST',
+        path: '/v1/projects',
+        description: '创建新的Supabase项目',
+        officialDocs: 'https://supabase.com/docs/reference/api/management-api#create-a-project',
+        requestBody: {
+          type: 'application/json',
+          description: '项目创建参数',
+          schema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string' },
+              organization_id: { type: 'string' },
+              plan: { type: 'string' },
+              region: { type: 'string' },
+              db_pass: { type: 'string' }
+            }
+          },
+          example: {
+            name: 'New Project',
+            organization_id: 'org_123',
+            plan: 'free',
+            region: 'us-east-1',
+            db_pass: 'secure_password_123'
+          }
+        },
+        responses: [
+          {
+            status: 201,
+            description: '项目创建成功',
+            example: {
+              id: 'new123project456',
+              name: 'New Project',
+              organization_id: 'org_123',
+              region: 'us-east-1',
+              status: 'COMING_UP'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '创建新项目',
+            description: '在指定组织下创建新的Supabase项目',
+            request: `curl -X POST 'https://api.supabase.com/v1/projects' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "name": "New Project",
+  "organization_id": "org_123",
+  "plan": "free",
+  "region": "us-east-1",
+  "db_pass": "secure_password_123"
+}'`,
+            response: `{
+  "id": "new123project456",
+  "name": "New Project",
+  "organization_id": "org_123",
+  "region": "us-east-1",
+  "status": "COMING_UP"
+}`
+          }
+        ]
+      },
+      {
+        id: 'mgmt-delete-project',
+        name: '删除项目',
+        method: 'DELETE',
+        path: '/v1/projects/{project_id}',
+        description: '删除指定的项目',
+        officialDocs: 'https://supabase.com/docs/reference/api/management-api#delete-a-project',
+        parameters: [
+          {
+            name: 'project_id',
+            type: 'string',
+            required: true,
+            description: '项目ID',
+            example: 'abc123def456'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '项目删除成功',
+            example: {
+              message: 'Project deleted successfully'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '删除项目',
+            description: '永久删除指定的项目及其所有数据',
+            request: `curl -X DELETE 'https://api.supabase.com/v1/projects/abc123def456' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `{
+  "message": "Project deleted successfully"
+}`
+          }
+        ]
+      },
+      {
+        id: 'mgmt-get-project-api-keys',
+        name: '获取项目API密钥',
+        method: 'GET',
+        path: '/v1/projects/{project_id}/api-keys',
+        description: '获取项目的API密钥信息',
+        officialDocs: 'https://supabase.com/docs/reference/api/management-api#get-project-api-keys',
+        parameters: [
+          {
+            name: 'project_id',
+            type: 'string',
+            required: true,
+            description: '项目ID',
+            example: 'abc123def456'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: 'API密钥获取成功',
+            example: [
+              {
+                name: 'anon',
+                api_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              },
+              {
+                name: 'service_role',
+                api_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '获取API密钥',
+            description: '获取项目的anon和service_role密钥',
+            request: `curl -X GET 'https://api.supabase.com/v1/projects/abc123def456/api-keys' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "name": "anon",
+    "api_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  },
+  {
+    "name": "service_role", 
+    "api_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'mgmt-get-project-config',
+        name: '获取项目配置',
+        method: 'GET',
+        path: '/v1/projects/{project_id}/config',
+        description: '获取项目的配置信息',
+        officialDocs: 'https://supabase.com/docs/reference/api/management-api#get-project-configuration',
+        parameters: [
+          {
+            name: 'project_id',
+            type: 'string',
+            required: true,
+            description: '项目ID',
+            example: 'abc123def456'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '项目配置获取成功',
+            example: {
+              db_host: 'db.abc123def456.supabase.co',
+              db_name: 'postgres',
+              db_port: 5432,
+              db_user: 'postgres',
+              jwt_secret: 'your-jwt-secret',
+              anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+              service_role_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '获取项目配置',
+            description: '获取项目的数据库连接和密钥配置',
+            request: `curl -X GET 'https://api.supabase.com/v1/projects/abc123def456/config' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `{
+  "db_host": "db.abc123def456.supabase.co",
+  "db_name": "postgres",
+  "db_port": 5432,
+  "db_user": "postgres",
+  "jwt_secret": "your-jwt-secret",
+  "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "service_role_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}`
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'advanced-database',
+    name: '高级数据库操作',
+    description: 'PostgREST高级功能 - 复杂查询、过滤、聚合等',
+    officialDocs: 'https://postgrest.org/en/stable/references/api.html',
+    endpoints: [
+      {
+        id: 'db-filter-operators',
+        name: '过滤操作符',
+        method: 'GET',
+        path: '/rest/v1/{table}',
+        description: '使用各种过滤操作符查询数据',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/filtering',
+        parameters: [
+          {
+            name: 'table',
+            type: 'string',
+            required: true,
+            description: '表名',
+            example: 'users'
+          },
+          {
+            name: 'column',
+            type: 'string',
+            required: false,
+            description: '过滤条件，支持eq、neq、gt、gte、lt、lte、like、ilike、in、is等',
+            example: 'age=gte.18&name=ilike.*john*'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '过滤查询成功',
+            example: [
+              {
+                id: 1,
+                name: 'John Doe',
+                age: 25,
+                email: 'john@example.com'
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '复杂过滤查询',
+            description: '使用多种过滤操作符查询数据',
+            request: `curl -X GET 'https://your-project.supabase.co/rest/v1/users?age=gte.18&name=ilike.*john*&status=in.(active,pending)' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "age": 25,
+    "email": "john@example.com",
+    "status": "active"
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'db-join-tables',
+        name: '表关联查询',
+        method: 'GET',
+        path: '/rest/v1/{table}',
+        description: '查询关联表数据',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/joins-and-nesting',
+        parameters: [
+          {
+            name: 'table',
+            type: 'string',
+            required: true,
+            description: '主表名',
+            example: 'users'
+          },
+          {
+            name: 'select',
+            type: 'string',
+            required: false,
+            description: '选择字段，包括关联表字段',
+            example: 'id,name,posts(id,title,content)'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '关联查询成功',
+            example: [
+              {
+                id: 1,
+                name: 'John Doe',
+                posts: [
+                  {
+                    id: 1,
+                    title: 'First Post',
+                    content: 'Hello World'
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '查询用户及其文章',
+            description: '获取用户信息及其关联的文章数据',
+            request: `curl -X GET 'https://your-project.supabase.co/rest/v1/users?select=id,name,email,posts(id,title,created_at)' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "posts": [
+      {
+        "id": 1,
+        "title": "First Post",
+        "created_at": "2023-01-01T00:00:00.000Z"
+      }
+    ]
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'db-aggregate-functions',
+        name: '聚合函数',
+        method: 'GET',
+        path: '/rest/v1/{table}',
+        description: '使用聚合函数进行统计查询',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/aggregate-functions',
+        parameters: [
+          {
+            name: 'table',
+            type: 'string',
+            required: true,
+            description: '表名',
+            example: 'orders'
+          },
+          {
+            name: 'select',
+            type: 'string',
+            required: false,
+            description: '聚合函数：count、sum、avg、min、max等',
+            example: 'count(),sum(amount),avg(amount)'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '聚合查询成功',
+            example: [
+              {
+                count: 100,
+                sum: 50000,
+                avg: 500
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '订单统计查询',
+            description: '统计订单数量、总金额和平均金额',
+            request: `curl -X GET 'https://your-project.supabase.co/rest/v1/orders?select=count(),sum(amount),avg(amount)' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "count": 100,
+    "sum": 50000,
+    "avg": 500
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'db-full-text-search',
+        name: '全文搜索',
+        method: 'GET',
+        path: '/rest/v1/{table}',
+        description: '使用PostgreSQL全文搜索功能',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/full-text-search',
+        parameters: [
+          {
+            name: 'table',
+            type: 'string',
+            required: true,
+            description: '表名',
+            example: 'articles'
+          },
+          {
+            name: 'column',
+            type: 'string',
+            required: false,
+            description: '全文搜索条件，使用fts、plfts、phfts、wfts操作符',
+            example: 'title=fts.javascript&content=plfts.tutorial'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: '全文搜索成功',
+            example: [
+              {
+                id: 1,
+                title: 'JavaScript Tutorial',
+                content: 'Learn JavaScript basics...'
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '文章全文搜索',
+            description: '在文章标题和内容中搜索关键词',
+            request: `curl -X GET 'https://your-project.supabase.co/rest/v1/articles?title=fts.javascript&content=plfts.tutorial' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "id": 1,
+    "title": "JavaScript Tutorial",
+    "content": "Learn JavaScript basics and advanced concepts...",
+    "created_at": "2023-01-01T00:00:00.000Z"
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'db-json-operations',
+        name: 'JSON操作',
+        method: 'GET',
+        path: '/rest/v1/{table}',
+        description: '对JSON/JSONB字段进行查询和操作',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/json-columns',
+        parameters: [
+          {
+            name: 'table',
+            type: 'string',
+            required: true,
+            description: '表名',
+            example: 'products'
+          },
+          {
+            name: 'json_column',
+            type: 'string',
+            required: false,
+            description: 'JSON字段查询，使用->、->>、@>、<@等操作符',
+            example: 'metadata->color=eq.red&tags@>["electronics"]'
+          }
+        ],
+        responses: [
+          {
+            status: 200,
+            description: 'JSON查询成功',
+            example: [
+              {
+                id: 1,
+                name: 'Red Phone',
+                metadata: { color: 'red', brand: 'Apple' },
+                tags: ['electronics', 'mobile']
+              }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: 'JSON字段查询',
+            description: '查询JSON字段中的特定值',
+            request: `curl -X GET 'https://your-project.supabase.co/rest/v1/products?metadata->>color=eq.red&tags@>["electronics"]' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN'`,
+            response: `[
+  {
+    "id": 1,
+    "name": "Red Phone",
+    "metadata": {
+      "color": "red",
+      "brand": "Apple"
+    },
+    "tags": ["electronics", "mobile"]
+  }
+]`
+          }
+        ]
+      },
+      {
+        id: 'db-bulk-operations',
+        name: '批量操作',
+        method: 'POST',
+        path: '/rest/v1/{table}',
+        description: '批量插入、更新或删除数据',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/bulk-operations',
+        parameters: [
+          {
+            name: 'table',
+            type: 'string',
+            required: true,
+            description: '表名',
+            example: 'users'
+          }
+        ],
+        requestBody: {
+          type: 'application/json',
+          description: '批量数据数组',
+          schema: {
+            type: 'array',
+            items: { type: 'object' }
+          },
+          example: [
+            { name: 'User 1', email: 'user1@example.com' },
+            { name: 'User 2', email: 'user2@example.com' },
+            { name: 'User 3', email: 'user3@example.com' }
+          ]
+        },
+        responses: [
+          {
+            status: 201,
+            description: '批量操作成功',
+            example: [
+              { id: 1, name: 'User 1', email: 'user1@example.com' },
+              { id: 2, name: 'User 2', email: 'user2@example.com' },
+              { id: 3, name: 'User 3', email: 'user3@example.com' }
+            ]
+          }
+        ],
+        examples: [
+          {
+            title: '批量插入用户',
+            description: '一次性插入多个用户记录',
+            request: `curl -X POST 'https://your-project.supabase.co/rest/v1/users' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \\
+-H 'Content-Type: application/json' \\
+-H 'Prefer: return=representation' \\
+-d '[
+  {"name": "User 1", "email": "user1@example.com"},
+  {"name": "User 2", "email": "user2@example.com"},
+  {"name": "User 3", "email": "user3@example.com"}
+]'`,
+            response: `[
+  {"id": 1, "name": "User 1", "email": "user1@example.com"},
+  {"id": 2, "name": "User 2", "email": "user2@example.com"},
+  {"id": 3, "name": "User 3", "email": "user3@example.com"}
+]`
+          }
+        ]
+      },
+      {
+        id: 'db-transactions',
+        name: '事务操作',
+        method: 'POST',
+        path: '/rest/v1/rpc/{function_name}',
+        description: '通过存储过程执行事务操作',
+        officialDocs: 'https://supabase.com/docs/guides/api/rest/transactions',
+        parameters: [
+          {
+            name: 'function_name',
+            type: 'string',
+            required: true,
+            description: '事务函数名称',
+            example: 'transfer_funds'
+          }
+        ],
+        requestBody: {
+          type: 'application/json',
+          description: '事务参数',
+          schema: {
+            type: 'object'
+          },
+          example: {
+            from_account: 1,
+            to_account: 2,
+            amount: 100
+          }
+        },
+        responses: [
+          {
+            status: 200,
+            description: '事务执行成功',
+            example: {
+              success: true,
+              transaction_id: 'txn_123456'
+            }
+          }
+        ],
+        examples: [
+          {
+            title: '资金转账事务',
+            description: '执行账户间资金转账的原子操作',
+            request: `curl -X POST 'https://your-project.supabase.co/rest/v1/rpc/transfer_funds' \\
+-H 'apikey: YOUR_SUPABASE_ANON_KEY' \\
+-H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \\
+-H 'Content-Type: application/json' \\
+-d '{
+  "from_account": 1,
+  "to_account": 2,
+  "amount": 100
+}'`,
+            response: `{
+  "success": true,
+  "transaction_id": "txn_123456",
+  "from_balance": 900,
+  "to_balance": 1100
+}`
+          }
+        ]
+      }
+    ]
   }
 ]
