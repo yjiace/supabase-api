@@ -4,6 +4,7 @@ export interface ApiEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'WebSocket'
   path: string
   description: string
+  officialDocs?: string // 官方文档链接
   parameters?: Parameter[]
   requestBody?: RequestBody
   responses: Response[]
@@ -43,6 +44,7 @@ export interface ApiCategory {
   id: string
   name: string
   description: string
+  officialDocs?: string // 分类官方文档链接
   endpoints: ApiEndpoint[]
 }
 
@@ -51,6 +53,7 @@ export const apiCategories: ApiCategory[] = [
     id: 'database',
     name: '数据库操作',
     description: '数据的增删改查操作',
+    officialDocs: 'https://supabase.com/docs/reference/javascript/select',
     endpoints: [
       {
         id: 'db-select',
@@ -58,6 +61,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'GET',
         path: '/rest/v1/{table}',
         description: '从指定表中查询数据',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/select',
         parameters: [
           {
             name: 'table',
@@ -152,6 +156,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'POST',
         path: '/rest/v1/{table}',
         description: '向指定表中插入新数据',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/insert',
         parameters: [
           {
             name: 'table',
@@ -223,6 +228,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'PATCH',
         path: '/rest/v1/{table}',
         description: '更新指定表中的数据',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/update',
         parameters: [
           {
             name: 'table',
@@ -294,6 +300,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'DELETE',
         path: '/rest/v1/{table}',
         description: '删除指定表中的数据',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/delete',
         parameters: [
           {
             name: 'table',
@@ -334,6 +341,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'POST',
         path: '/rest/v1/{table}',
         description: '插入新数据或更新已存在的数据',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/upsert',
         parameters: [
           {
             name: 'table',
@@ -407,6 +415,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'POST',
         path: '/rest/v1/rpc/{function_name}',
         description: '调用数据库中的存储过程或函数',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/rpc',
         parameters: [
           {
             name: 'function_name',
@@ -637,6 +646,7 @@ export const apiCategories: ApiCategory[] = [
     id: 'auth',
     name: '身份认证',
     description: '用户注册、登录、登出等认证相关接口',
+    officialDocs: 'https://supabase.com/docs/reference/javascript/auth-signup',
     endpoints: [
       {
         id: 'auth-signup',
@@ -644,6 +654,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'POST',
         path: '/auth/v1/signup',
         description: '创建新用户账户',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/auth-signup',
         requestBody: {
           type: 'application/json',
           description: '用户注册信息',
@@ -718,6 +729,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'POST',
         path: '/auth/v1/token?grant_type=password',
         description: '用户登录获取访问令牌',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/auth-signinwithpassword',
         requestBody: {
           type: 'application/json',
           description: '登录凭据',
@@ -777,6 +789,7 @@ export const apiCategories: ApiCategory[] = [
         method: 'POST',
         path: '/auth/v1/logout',
         description: '用户登出并撤销访问令牌',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/auth-signout',
         responses: [
           {
             status: 204,
@@ -1893,6 +1906,7 @@ Location: https://yourapp.com/auth/callback#access_token=...`
     id: 'storage',
     name: '文件存储',
     description: '文件上传、下载和管理',
+    officialDocs: 'https://supabase.com/docs/reference/javascript/storage-from-upload',
     endpoints: [
       {
         id: 'storage-upload',
@@ -1900,6 +1914,7 @@ Location: https://yourapp.com/auth/callback#access_token=...`
         method: 'POST',
         path: '/storage/v1/object/{bucket}/{path}',
         description: '上传文件到指定存储桶',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/storage-from-upload',
         parameters: [
           {
             name: 'bucket',
@@ -1966,6 +1981,7 @@ Location: https://yourapp.com/auth/callback#access_token=...`
         method: 'GET',
         path: '/storage/v1/object/{bucket}/{path}',
         description: '从存储桶下载文件',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/storage-from-download',
         parameters: [
           {
             name: 'bucket',
@@ -2443,6 +2459,7 @@ Location: https://yourapp.com/auth/callback#access_token=...`
     id: 'realtime',
     name: '实时订阅',
     description: '实时数据变化监听',
+    officialDocs: 'https://supabase.com/docs/reference/javascript/subscribe',
     endpoints: [
       {
         id: 'realtime-subscribe',
@@ -2450,6 +2467,7 @@ Location: https://yourapp.com/auth/callback#access_token=...`
         method: 'WebSocket',
         path: '/realtime/v1/websocket',
         description: '通过WebSocket订阅数据库表的实时变化',
+        officialDocs: 'https://supabase.com/docs/reference/javascript/subscribe',
         parameters: [
           {
             name: 'table',

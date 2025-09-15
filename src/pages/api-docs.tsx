@@ -31,7 +31,8 @@ import {
   Layers,
   Puzzle,
   History,
-  FolderOpen
+  FolderOpen,
+  ExternalLink
 } from 'lucide-react'
 
 export const ApiDocs: React.FC = () => {
@@ -125,23 +126,37 @@ export const ApiDocs: React.FC = () => {
                 
                 return (
                   <div key={category.id}>
-                    <button
-                      onClick={() => toggleCategory(category.id)}
-                      className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-dark-border transition-colors text-left"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <IconComponent className="w-5 h-5 text-neon-green" />
-                        <div>
-                          <div className="font-medium text-cyber-light">{category.name}</div>
-                          <div className="text-xs text-cyber-gray">{category.endpoints.length} 个接口</div>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => toggleCategory(category.id)}
+                        className="flex-1 flex items-center justify-between p-3 rounded-lg hover:bg-dark-border transition-colors text-left"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <IconComponent className="w-5 h-5 text-neon-green" />
+                          <div>
+                            <div className="font-medium text-cyber-light">{category.name}</div>
+                            <div className="text-xs text-cyber-gray">{category.endpoints.length} 个接口</div>
+                          </div>
                         </div>
-                      </div>
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-cyber-gray" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-cyber-gray" />
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-cyber-gray" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-cyber-gray" />
+                        )}
+                      </button>
+                      {category.officialDocs && (
+                        <a
+                          href={category.officialDocs}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 p-2 hover:bg-neon-green/10 rounded-md transition-colors group"
+                          title="查看官方文档"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3 h-3 text-cyber-gray group-hover:text-neon-green" />
+                        </a>
                       )}
-                    </button>
+                    </div>
                     
                     {isExpanded && (
                       <div className="ml-8 mt-2 space-y-1">
@@ -179,11 +194,24 @@ export const ApiDocs: React.FC = () => {
               <div className="max-w-4xl">
                 {/* Header */}
                 <div className="mb-8">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Badge variant={methodColors[selectedEndpoint.method]} className="text-sm">
-                      {selectedEndpoint.method}
-                    </Badge>
-                    <h1 className="text-3xl font-bold text-cyber-light">{selectedEndpoint.name}</h1>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <Badge variant={methodColors[selectedEndpoint.method]} className="text-sm">
+                        {selectedEndpoint.method}
+                      </Badge>
+                      <h1 className="text-3xl font-bold text-cyber-light">{selectedEndpoint.name}</h1>
+                    </div>
+                    {selectedEndpoint.officialDocs && (
+                      <a
+                        href={selectedEndpoint.officialDocs}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 px-4 py-2 bg-neon-green/10 hover:bg-neon-green/20 border border-neon-green/30 rounded-lg transition-colors group"
+                      >
+                        <ExternalLink className="w-4 h-4 text-neon-green" />
+                        <span className="text-neon-green font-medium">官方文档</span>
+                      </a>
+                    )}
                   </div>
                   <p className="text-lg text-cyber-gray mb-4">{selectedEndpoint.description}</p>
                   <div className="bg-dark-surface rounded-lg p-4 border border-dark-border">
