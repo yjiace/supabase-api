@@ -8419,9 +8419,9 @@ console.log('Public URL:', data.publicUrl)`,
     ]
   },
   {
-    id: 'rest-organizations',
-    name: '组织 (REST API)',
-    description: 'Supabase 管理 API - 组织管理',
+    id: 'rest-organizations-management',
+    name: '组织管理 (REST API)',
+    description: 'Supabase 管理 API - 组织管理和配置',
     officialDocs: 'https://supabase.com/docs/reference/api/introduction',
     endpoints: [
       {

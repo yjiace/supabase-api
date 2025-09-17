@@ -34,7 +34,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     if (codeRef.current) {
       // Set the code content
       codeRef.current.textContent = code
-      
+
       // Apply syntax highlighting
       try {
         Prism.highlightElement(codeRef.current)
@@ -60,7 +60,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       className
     )}>
       <pre className="p-4 overflow-x-auto bg-gray-900 text-sm">
-        <code 
+        <code
           ref={codeRef}
           className={`language-${language} block`}
         >

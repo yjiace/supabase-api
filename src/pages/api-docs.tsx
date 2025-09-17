@@ -11,24 +11,41 @@ import {
   Globe,
   Database,
   Shield,
-  Zap,
   HardDrive,
-  Wifi,
   Code,
-  Settings,
   Webhook,
   BarChart3,
-  Lock,
   Server,
   FileText,
   GitBranch,
   Archive,
   Award,
-  Network,
-  Puzzle,
   ExternalLink,
   Key,
-  AlertTriangle
+  AlertTriangle,
+  Users,
+  Cloud,
+  Radio,
+  ShieldCheck,
+  Package,
+  Settings,
+  TrendingUp,
+  Building,
+  Building2,
+  Layers,
+  Monitor,
+  Activity,
+  Briefcase,
+  Cpu,
+  Folder,
+  Lock,
+  Globe2,
+  PieChart,
+  CreditCard,
+  MapPin,
+  UserX,
+  Cog,
+  Zap
 } from 'lucide-react'
 
 export const ApiDocs: React.FC = () => {
@@ -41,22 +58,49 @@ export const ApiDocs: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
   const categoryIcons = {
-    auth: Shield,              // 身份认证 - 盾牌图标表示安全认证
-    database: Database,        // 数据库操作 - 数据库图标
-    schema: FileText,          // 数据库模式 - 文档图标表示结构定义
-    'rls-policies': Lock,      // RLS策略管理 - 锁图标表示权限控制
-    'database-functions': Code, // 数据库函数 - 代码图标表示函数
-    extensions: Puzzle,        // PostgreSQL扩展 - 拼图图标表示扩展功能
-    migrations: GitBranch,     // 数据库迁移 - 分支图标表示版本迁移
-    storage: HardDrive,        // 文件存储 - 硬盘图标表示存储
-    realtime: Wifi,            // 实时订阅 - WiFi图标表示实时连接
-    'edge-functions': Zap,     // 边缘函数 - 闪电图标表示快速执行
-    admin: Settings,           // 管理接口 - 设置图标表示管理
-    webhooks: Webhook,         // Webhook - 专用Webhook图标
-    'backup-restore': Archive, // 备份恢复 - 归档图标表示备份
-    'ssl-certificates': Award, // SSL证书管理 - 奖章图标表示证书认证
-    'custom-domains': Network, // 自定义域名 - 网络图标表示域名配置
-    analytics: BarChart3       // 分析统计 - 柱状图图标表示数据分析
+    // 1. JS SDK 主要分类 (5个)
+    auth: Users,               // 身份认证
+    database: Database,        // 数据库操作
+    'edge-functions': Cloud,   // 边缘函数
+    realtime: Radio,           // 实时订阅
+    storage: Folder,           // 文件存储
+
+    // 2. 高级功能分类 (11个)
+    schema: FileText,          // 数据库模式
+    'rls-policies': ShieldCheck, // RLS策略管理
+    'database-functions': Code, // 数据库函数
+    extensions: Package,       // PostgreSQL扩展
+    migrations: GitBranch,     // 数据库迁移
+    admin: Settings,           // 管理接口
+    webhooks: Webhook,         // Webhook
+    'backup-restore': Archive, // 备份恢复
+    'ssl-certificates': Award, // SSL证书管理
+    'custom-domains': Globe,   // 自定义域名
+    analytics: TrendingUp,     // 分析统计
+
+    // 3. REST API 分类 (12个) - 使用不同的图标
+    'rest-analytics': BarChart3,     // REST分析
+    'rest-auth': Shield,             // REST认证
+    'rest-database': Layers,         // REST数据库
+    'rest-projects': Briefcase,      // 项目管理
+    'rest-functions': Cpu,           // REST函数
+    'rest-storage': HardDrive,       // REST存储
+    'rest-organizations': Building,  // 组织管理
+    'rest-organizations-management': Building2, // 组织高级管理
+    'rest-secrets': Key,             // 密钥管理
+    'rest-ssl': Lock,                // SSL证书
+    'rest-vanity-subdomains': Globe2, // 自定义域名
+    'rest-branches': Server,         // 分支管理
+
+    // 4. 其他分类 (8个)
+    monitoring: Monitor,       // 监控
+    activity: Activity,        // 活动日志
+    'user-management': PieChart, // 用户管理
+    'rest-billing': CreditCard, // 计费 - 信用卡图标
+    'rest-domains': MapPin,     // 域名 - 地图标记图标
+    'rest-environments': Zap,      // 环境 - 闪电图标表示动态环境
+    'rest-oauth': UserX,        // OAuth - 用户X图标
+    'rest-postgrest': Cog       // PostgREST - 齿轮图标
   }
 
   const methodColors = {
