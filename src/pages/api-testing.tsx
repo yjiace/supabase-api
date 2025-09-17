@@ -7,6 +7,8 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { CodeBlock } from '@/components/ui/code-block'
 import { JsonEditor } from '@/components/ui/json-editor'
+import { UnifiedConfig } from '@/components/ui/unified-config'
+import { ConfigStatus } from '@/components/ui/config-status'
 import { apiCategories, ApiEndpoint } from '@/data/api-docs'
 import { 
   Settings, 
@@ -35,6 +37,11 @@ interface TestConfig {
   serviceRoleKey?: string
 }
 
+interface RestAuthConfig {
+  accessToken: string
+  supabaseManagementUrl: string
+}
+
 interface TestRequest {
   endpoint: ApiEndpoint
   parameters: Record<string, string>
@@ -58,6 +65,11 @@ export const ApiTesting: React.FC = () => {
     serviceRoleKey: ''
   })
   
+  const [restConfig, setRestConfig] = useState<RestAuthConfig>({
+    accessToken: '',
+    supabaseManagementUrl: 'https://api.supabase.com'
+  })
+  
   const [showSettings, setShowSettings] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(apiCategories[0]?.id || '')
   const [selectedEndpoint, setSelectedEndpoint] = useState<ApiEndpoint | null>(null)
@@ -76,8 +88,20 @@ export const ApiTesting: React.FC = () => {
   const [tempServiceKey, setTempServiceKey] = useState('')
   const [showTempServiceKeyInput, setShowTempServiceKeyInput] = useState(false)
 
+  // 判断是否为 REST API 接口
+  const isRestApiEndpoint = (endpoint: ApiEndpoint): boolean => {
+    const category = apiCategories.find(cat => 
+      cat.endpoints.some(ep => ep.id === endpoint.id)
+    )
+    return category?.id.startsWith('rest-') || false
+  }
+
   // 根据接口路径和功能判断所需的密钥类型
-  const getRequiredKeyType = (endpoint: ApiEndpoint): 'anon' | 'service_role' | 'both' => {
+  const getRequiredKeyType = (endpoint: ApiEndpoint): 'anon' | 'service_role' | 'both' | 'rest_token' => {
+    // REST API 接口需要个人访问令牌
+    if (isRestApiEndpoint(endpoint)) {
+      return 'rest_token'
+    }
     const path = endpoint.path.toLowerCase()
     const name = endpoint.name.toLowerCase()
     const description = endpoint.description.toLowerCase()
@@ -127,7 +151,7 @@ export const ApiTesting: React.FC = () => {
     return 'both'
   }
 
-  const getKeyTypeInfo = (keyType: 'anon' | 'service_role' | 'both') => {
+  const getKeyTypeInfo = (keyType: 'anon' | 'service_role' | 'both' | 'rest_token') => {
     switch (keyType) {
       case 'anon':
         return {
@@ -153,6 +177,14 @@ export const ApiTesting: React.FC = () => {
           description: '匿名密钥或服务密钥均可使用',
           warning: null
         }
+      case 'rest_token':
+        return {
+          label: '个人访问令牌 (Personal Access Token)',
+          color: 'error',
+          icon: Shield,
+          description: 'REST API 管理接口专用',
+          warning: '⚠️ 此接口需要个人访问令牌，具有完整账户访问权限，请在安全环境中使用'
+        }
     }
   }
 
@@ -171,6 +203,17 @@ export const ApiTesting: React.FC = () => {
     } else {
       // If no config exists, show settings by default
       setShowSettings(true)
+    }
+
+    // Load REST config
+    const savedRestConfig = localStorage.getItem('supabase-rest-api-config')
+    if (savedRestConfig) {
+      try {
+        const parsedRestConfig = JSON.parse(savedRestConfig)
+        setRestConfig(parsedRestConfig)
+      } catch (error) {
+        console.error('Failed to parse saved REST config:', error)
+      }
     }
 
     // Load test history from localStorage
@@ -198,6 +241,12 @@ export const ApiTesting: React.FC = () => {
     localStorage.setItem('supabase-api-config', JSON.stringify(newConfig))
   }
 
+  // Save REST config to localStorage
+  const saveRestConfig = (newConfig: RestAuthConfig) => {
+    setRestConfig(newConfig)
+    localStorage.setItem('supabase-rest-api-config', JSON.stringify(newConfig))
+  }
+
   const categoryOptions = apiCategories.map(cat => ({
     value: cat.id,
     label: cat.name
@@ -223,27 +272,44 @@ export const ApiTesting: React.FC = () => {
     if (endpoint) {
       setSelectedEndpoint(endpoint)
       
+      // REST API 接口会在配置状态中显示相应提示
+      
       // 根据接口需求选择合适的密钥
       const keyType = getRequiredKeyType(endpoint)
       let selectedKey = config.apiKey
       
-      if (keyType === 'service_role' && config.serviceRoleKey) {
+      if (keyType === 'rest_token') {
+        selectedKey = restConfig.accessToken
+        setShowTempServiceKeyInput(false)
+      } else if (keyType === 'service_role' && config.serviceRoleKey) {
         selectedKey = config.serviceRoleKey
+        setShowTempServiceKeyInput(false)
       } else if (keyType === 'service_role' && !config.serviceRoleKey) {
         setShowTempServiceKeyInput(true)
       } else {
         setShowTempServiceKeyInput(false)
       }
       
-      setTestRequest({
-        endpoint,
-        parameters: {},
-        requestBody: endpoint.requestBody?.example ? JSON.stringify(endpoint.requestBody.example, null, 2) : '{}',
-        headers: {
+      // 设置请求头
+      let headers: Record<string, string>
+      if (isRestApiEndpoint(endpoint)) {
+        headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${selectedKey}`
+        }
+      } else {
+        headers = {
           'Content-Type': 'application/json',
           'apikey': selectedKey,
           'Authorization': `Bearer ${selectedKey}`
         }
+      }
+      
+      setTestRequest({
+        endpoint,
+        parameters: {},
+        requestBody: endpoint.requestBody?.example ? JSON.stringify(endpoint.requestBody.example, null, 2) : '{}',
+        headers
       })
       setTestResponse(null)
     }
@@ -278,8 +344,38 @@ export const ApiTesting: React.FC = () => {
   }
 
   const buildRequestUrl = () => {
-    if (!selectedEndpoint || !config.supabaseUrl) return ''
+    if (!selectedEndpoint) return ''
     
+    // 判断是否为 REST API 接口
+    if (isRestApiEndpoint(selectedEndpoint)) {
+      if (!restConfig.supabaseManagementUrl) return ''
+      let url = restConfig.supabaseManagementUrl.replace(/\/$/, '') + selectedEndpoint.path
+      
+      // Replace path parameters
+      Object.entries(testRequest.parameters).forEach(([key, value]) => {
+        if (value && selectedEndpoint.path.includes(`{${key}}`)) {
+          url = url.replace(`{${key}}`, encodeURIComponent(value))
+        }
+      })
+      
+      // Add query parameters for REST API
+      const queryParams = new URLSearchParams()
+      Object.entries(testRequest.parameters).forEach(([key, value]) => {
+        if (value && !selectedEndpoint.path.includes(`{${key}}`)) {
+          queryParams.append(key, value)
+        }
+      })
+      
+      const queryString = queryParams.toString()
+      if (queryString) {
+        url += '?' + queryString
+      }
+      
+      return url
+    }
+    
+    // JS SDK 接口处理
+    if (!config.supabaseUrl) return ''
     let url = config.supabaseUrl.replace(/\/$/, '') + selectedEndpoint.path
     
     // Replace path parameters (parameters that appear in the URL path with {})
@@ -348,16 +444,35 @@ export const ApiTesting: React.FC = () => {
   }
 
   const executeTest = async () => {
-    if (!selectedEndpoint || !config.supabaseUrl) {
-      alert('请先配置Supabase URL')
+    if (!selectedEndpoint) {
+      alert('请先选择接口')
       return
+    }
+
+    // 检查配置
+    if (isRestApiEndpoint(selectedEndpoint)) {
+      if (!restConfig.supabaseManagementUrl || !restConfig.accessToken) {
+        alert('请先配置 REST API 认证信息')
+        return
+      }
+    } else {
+      if (!config.supabaseUrl) {
+        alert('请先配置Supabase URL')
+        return
+      }
     }
 
     // 检查密钥配置
     const keyType = getRequiredKeyType(selectedEndpoint)
     let currentApiKey = config.apiKey
 
-    if (keyType === 'service_role') {
+    if (keyType === 'rest_token') {
+      if (!restConfig.accessToken) {
+        alert('此接口需要个人访问令牌，请在 REST API 配置中设置')
+        return
+      }
+      currentApiKey = restConfig.accessToken
+    } else if (keyType === 'service_role') {
       if (config.serviceRoleKey) {
         currentApiKey = config.serviceRoleKey
       } else if (tempServiceKey) {
@@ -366,7 +481,7 @@ export const ApiTesting: React.FC = () => {
         alert('此接口需要服务端密钥，请在设置中配置或使用临时密钥输入框')
         return
       }
-    } else if (!config.apiKey) {
+    } else if (!['rest_token', 'service_role'].includes(keyType) && !config.apiKey) {
       alert('请先配置API Key')
       return
     }
@@ -404,10 +519,21 @@ export const ApiTesting: React.FC = () => {
 
     try {
       const url = buildRequestUrl()
-      const headers = {
-        ...testRequest.headers,
-        'apikey': currentApiKey,
-        'Authorization': `Bearer ${currentApiKey}`
+      let headers: Record<string, string>
+      
+      if (isRestApiEndpoint(selectedEndpoint)) {
+        // REST API 使用 Bearer token 认证
+        headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentApiKey}`
+        }
+      } else {
+        // JS SDK 接口使用 apikey 和 Authorization
+        headers = {
+          ...testRequest.headers,
+          'apikey': currentApiKey,
+          'Authorization': `Bearer ${currentApiKey}`
+        }
       }
 
       let requestData = undefined
@@ -521,126 +647,100 @@ export const ApiTesting: React.FC = () => {
     setShowHistoryModal(false)
   }
 
-  const isConfigValid = config.supabaseUrl && config.apiKey
+  const isConfigValid = !!(config.supabaseUrl && config.apiKey)
+  const isRestConfigValid = !!(restConfig.supabaseManagementUrl && restConfig.accessToken)
 
   // 检查当前选择的接口是否有足够的密钥配置
   const hasRequiredKey = () => {
     if (!selectedEndpoint) return true
     
     const keyType = getRequiredKeyType(selectedEndpoint)
+    if (keyType === 'rest_token') {
+      return restConfig.accessToken
+    }
     if (keyType === 'service_role') {
       return config.serviceRoleKey || tempServiceKey || showTempServiceKeyInput
     }
     return config.apiKey
   }
 
+  // 获取当前接口类型的配置状态
+  const getCurrentConfigStatus = () => {
+    if (!selectedEndpoint) return { isValid: false, type: 'none' }
+    
+    if (isRestApiEndpoint(selectedEndpoint)) {
+      return { isValid: isRestConfigValid, type: 'rest' }
+    } else {
+      return { isValid: isConfigValid, type: 'sdk' }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
       {/* Header Panel */}
-      <div className={`bg-dark-surface border-b border-dark-border ${showSettings ? 'p-6' : 'px-6 py-4'}`}>
+      <div className="bg-dark-surface border-b border-dark-border px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <div className={`flex items-center justify-between ${showSettings ? 'mb-6' : 'mb-0'}`}>
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Settings className="w-6 h-6 text-neon-green" />
               <h1 className="text-2xl font-bold text-cyber-light">接口测试</h1>
-              <div className="flex items-center space-x-2">
-                {isConfigValid ? (
-                  <Badge variant="success" className="flex items-center space-x-1">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>已配置</span>
-                  </Badge>
-                ) : (
-                  <Badge variant="error" className="flex items-center space-x-1">
-                    <XCircle className="w-3 h-3" />
-                    <span>未配置</span>
-                  </Badge>
-                )}
-              </div>
             </div>
             
-            {/* Settings Toggle Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSettings(!showSettings)}
-              className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
-            >
-              <Settings className="w-4 h-4" />
-              <span>{showSettings ? '隐藏设置' : '显示设置'}</span>
-            </Button>
-          </div>
-
-          {/* Configuration Panel - Conditionally Rendered */}
-          {showSettings && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-              <div>
-                <label className="block text-sm font-medium text-cyber-light mb-2">
-                  <Globe className="w-4 h-4 inline mr-2" />
-                  Supabase URL
-                </label>
-                <Input
-                  placeholder="https://your-project.supabase.co"
-                  value={config.supabaseUrl}
-                  onChange={(e) => saveConfig({ ...config, supabaseUrl: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-cyber-light mb-2">
-                  <Key className="w-4 h-4 inline mr-2" />
-                  匿名密钥 (Anon Key)
-                </label>
-                <Input
-                  type="password"
-                  placeholder="your-supabase-anon-key"
-                  value={config.apiKey}
-                  onChange={(e) => saveConfig({ ...config, apiKey: e.target.value })}
-                />
-                <div className="mt-2 text-xs text-cyber-gray">
-                  <div className="flex items-center space-x-1">
-                    <Key className="w-3 h-3 text-neon-green" />
-                    <span>客户端安全，适用于大部分操作</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-cyber-light mb-2">
-                  <Shield className="w-4 h-4 inline mr-2" />
-                  服务端密钥 (Service Role Key)
-                  <span className="text-xs text-cyber-gray ml-1">(可选)</span>
-                </label>
-                <Input
-                  type="password"
-                  placeholder="your-service-role-key (可选)"
-                  value={config.serviceRoleKey || ''}
-                  onChange={(e) => saveConfig({ ...config, serviceRoleKey: e.target.value })}
-                />
-                <div className="mt-2 text-xs text-cyber-gray">
-                  <div className="flex items-center space-x-1">
-                    <Shield className="w-3 h-3 text-red-400" />
-                    <span>服务端专用，管理员操作必需</span>
-                  </div>
-                </div>
-              </div>
+            {/* Header Actions */}
+            <div className="flex items-center space-x-3">
+              {testHistory.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowHistoryModal(true)}
+                  className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
+                >
+                  <History className="w-4 h-4" />
+                  <span className="text-sm">测试历史</span>
+                </Button>
+              )}
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSettings(!showSettings)}
+                className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
+              >
+                <Settings className="w-4 h-4" />
+                <span>{showSettings ? '隐藏配置' : '显示配置'}</span>
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* Header with History Button */}
-        <div className="flex items-center justify-end mb-6">
-          {testHistory.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowHistoryModal(true)}
-              className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
-            >
-              <History className="w-4 h-4" />
-              <span className="text-sm">测试历史</span>
-            </Button>
-          )}
+        {/* Configuration Status */}
+        <div className="mb-6">
+          <ConfigStatus
+            isJsSdkConfigValid={isConfigValid}
+            isRestConfigValid={isRestConfigValid}
+            selectedEndpointType={
+              selectedEndpoint 
+                ? (isRestApiEndpoint(selectedEndpoint) ? 'rest-api' : 'js-sdk')
+                : null
+            }
+          />
         </div>
+
+        {/* Unified Configuration Panel */}
+        {showSettings && (
+          <div className="mb-6">
+            <UnifiedConfig
+              config={config}
+              restConfig={restConfig}
+              onConfigChange={saveConfig}
+              onRestConfigChange={saveRestConfig}
+              isVisible={true}
+              onToggleVisibility={() => setShowSettings(false)}
+            />
+          </div>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Request Configuration */}
@@ -691,6 +791,7 @@ export const ApiTesting: React.FC = () => {
                         const keyType = getRequiredKeyType(selectedEndpoint)
                         const keyInfo = getKeyTypeInfo(keyType)
                         const IconComponent = keyInfo.icon
+                        const configStatus = getCurrentConfigStatus()
                         
                         return (
                           <div className="mb-3">
@@ -701,6 +802,11 @@ export const ApiTesting: React.FC = () => {
                                 <IconComponent className="w-3 h-3" />
                                 <span>{keyInfo.label}</span>
                               </Badge>
+                              {keyType === 'rest_token' && (
+                                <Badge variant={configStatus.isValid ? "success" : "error"} className="text-xs">
+                                  {configStatus.isValid ? "已配置" : "未配置"}
+                                </Badge>
+                              )}
                             </div>
                             {keyInfo.warning && (
                               <div className="flex items-start space-x-2 mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-300">
@@ -712,6 +818,12 @@ export const ApiTesting: React.FC = () => {
                               <div className="flex items-start space-x-2 mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
                                 <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                 <span>此接口支持匿名密钥和服务密钥。使用匿名密钥时受RLS策略保护，使用服务密钥时拥有完全访问权限。</span>
+                              </div>
+                            )}
+                            {keyType === 'rest_token' && (
+                              <div className="flex items-start space-x-2 mt-2 p-2 bg-orange-500/10 border border-orange-500/30 rounded text-xs text-orange-300">
+                                <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                <span>此接口使用 Supabase 管理 API，需要个人访问令牌进行认证。请确保在安全环境中使用。</span>
                               </div>
                             )}
                           </div>
