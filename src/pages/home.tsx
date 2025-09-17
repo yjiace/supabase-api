@@ -148,7 +148,6 @@ const { data, error } = await supabase
 
       {/* API Keys Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-dark-surface/30">
-=======
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-cyber-light mb-4">

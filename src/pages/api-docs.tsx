@@ -223,7 +223,7 @@ export const ApiDocs: React.FC = () => {
     <div className="min-h-screen bg-dark-bg pt-16">
       <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Left Sidebar - API Navigation */}
-        <div className="w-full lg:w-80 xl:w-96 bg-dark-surface border-r border-dark-border flex-shrink-0 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
+        <div className="w-full lg:w-80 xl:w-96 bg-dark-surface lg:rounded-2xl lg:border lg:border-dark-border lg:shadow-2xl lg:shadow-dark-border/20 lg:m-4 lg:mr-0 flex-shrink-0 lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto backdrop-blur-sm">
           <div className="p-4 lg:p-6">
             <h2 className="text-xl lg:text-2xl font-bold text-cyber-light mb-4">API 文档</h2>
 
@@ -270,20 +270,6 @@ export const ApiDocs: React.FC = () => {
                           )}
                         </div>
                       </button>
-                      {/* {category.officialDocs && (
-                        <div className="pr-3">
-                          <a
-                            href={category.officialDocs}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2.5 hover:bg-neon-green/10 rounded-xl transition-all duration-300 group inline-block"
-                            title="查看官方文档"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-cyber-gray group-hover:text-neon-green transition-colors duration-300" />
-                          </a>
-                        </div>
-                      )} */}
                     </div>
 
                     {isExpanded && (
