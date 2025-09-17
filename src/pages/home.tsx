@@ -2,6 +2,7 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { CodeBlock } from '@/components/ui/code-block'
+import { AnimatedBackground } from '@/components/ui/animated-background'
 import { Database, Zap, Shield, Globe, ArrowRight, Key, Settings, Code, Users, FileText, Search, BarChart3 } from 'lucide-react'
 
 interface HomeProps {
@@ -179,15 +180,17 @@ subscription.unsubscribe()`
 
   return (
     <div className="min-h-screen bg-dark-bg">
-      {/* Grid Background */}
-      <div className="fixed inset-0 grid-background opacity-30 pointer-events-none" />
+      {/* 网格背景 */}
+      <div className="fixed inset-0 grid-background opacity-40 pointer-events-none" style={{ zIndex: 0 }} />
+      
+      <AnimatedBackground>
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
           <div className="animate-fade-in">
-            <h1 className="text-5xl md:text-7xl font-bold text-cyber-light mb-6">
-              Supabase API
+            <h1 className="text-5xl md:text-7xl font-bold text-cyber-light mb-6 leading-tight">
+              <div className="mb-6">Supabase API</div>
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-neon-green to-neon-blue">
                 演示平台
               </span>
@@ -201,7 +204,7 @@ subscription.unsubscribe()`
                 variant="cyber"
                 size="lg"
                 onClick={() => onPageChange('docs')}
-                className="group"
+                className="group glow-button"
               >
                 开始探索
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -210,6 +213,7 @@ subscription.unsubscribe()`
                 variant="outline"
                 size="lg"
                 onClick={() => onPageChange('testing')}
+                className="glow-button"
               >
                 在线测试
               </Button>
@@ -232,7 +236,7 @@ subscription.unsubscribe()`
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <Card key={index} className="group hover:scale-105 transition-all duration-300">
+              <Card key={index} className="group card-hover-effect">
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-to-r from-neon-green to-neon-blue rounded-lg flex items-center justify-center mb-4 group-hover:animate-pulse">
                     <feature.icon className="w-6 h-6 text-dark-bg" />
@@ -453,7 +457,7 @@ const supabase = createClient(
               variant="cyber"
               size="lg"
               onClick={() => onPageChange('docs')}
-              className="mr-4"
+              className="mr-4 glow-button"
             >
               查看 API 文档
             </Button>
@@ -461,6 +465,7 @@ const supabase = createClient(
               variant="outline"
               size="lg"
               onClick={() => onPageChange('testing')}
+              className="glow-button"
             >
               在线测试 API
             </Button>
@@ -482,7 +487,7 @@ const supabase = createClient(
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
             {apiExamples.map((example, index) => (
-              <Card key={index} className="h-full">
+              <Card key={index} className="h-full card-hover-effect">
                 <CardHeader>
                   <CardTitle className="text-xl text-cyber-light">{example.title}</CardTitle>
                   <CardDescription className="text-cyber-gray">
@@ -501,7 +506,7 @@ const supabase = createClient(
               variant="cyber"
               size="lg"
               onClick={() => onPageChange('testing')}
-              className="mr-4"
+              className="mr-4 glow-button"
             >
               在线测试 API
             </Button>
@@ -509,6 +514,7 @@ const supabase = createClient(
               variant="outline"
               size="lg"
               onClick={() => onPageChange('docs')}
+              className="glow-button"
             >
               查看完整文档
             </Button>
@@ -556,6 +562,7 @@ const supabase = createClient(
               variant="cyber"
               size="lg"
               onClick={() => onPageChange('docs')}
+              className="glow-button"
             >
               查看完整文档
             </Button>
@@ -576,7 +583,7 @@ const supabase = createClient(
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="text-center group hover:scale-105 transition-all duration-300">
+            <Card className="text-center group card-hover-effect">
               <CardHeader>
                 <Users className="w-12 h-12 text-neon-blue mx-auto mb-4 group-hover:animate-pulse" />
                 <CardTitle className="text-lg">社交应用</CardTitle>
@@ -588,7 +595,7 @@ const supabase = createClient(
               </CardContent>
             </Card>
 
-            <Card className="text-center group hover:scale-105 transition-all duration-300">
+            <Card className="text-center group card-hover-effect">
               <CardHeader>
                 <FileText className="w-12 h-12 text-neon-green mx-auto mb-4 group-hover:animate-pulse" />
                 <CardTitle className="text-lg">内容管理</CardTitle>
@@ -626,6 +633,7 @@ const supabase = createClient(
           </div>
         </div>
       </section>
+      </AnimatedBackground>
     </div>
   )
 }
