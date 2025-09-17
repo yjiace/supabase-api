@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { CodeBlock } from '@/components/ui/code-block'
 import { Input } from '@/components/ui/input'
+import { Footer } from '@/components/layout/footer'
 import { apiCategories, ApiEndpoint } from '@/data/api-docs'
 import {
   Search,
@@ -220,9 +221,9 @@ export const ApiDocs: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
-      <div className="flex flex-col lg:flex-row h-screen">
+      <div className="flex flex-col lg:flex-row min-h-screen">
         {/* Left Sidebar - API Navigation */}
-        <div className="w-full lg:w-80 xl:w-96 bg-dark-surface border-r border-dark-border overflow-y-auto flex-shrink-0 lg:h-full max-h-96 lg:max-h-none">
+        <div className="w-full lg:w-80 xl:w-96 bg-dark-surface border-r border-dark-border flex-shrink-0 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto">
           <div className="p-4 lg:p-6">
             <h2 className="text-xl lg:text-2xl font-bold text-cyber-light mb-4">API 文档</h2>
 
@@ -306,9 +307,9 @@ export const ApiDocs: React.FC = () => {
         </div>
 
         {/* Right Content - API Details */}
-        <div className="flex-1 overflow-y-auto lg:h-full">
+        <div className="flex-1 flex flex-col">
           {selectedEndpoint ? (
-            <div className="p-4 sm:p-6 lg:p-8 xl:p-12">
+            <div className="flex-1 p-4 sm:p-6 lg:p-8 xl:p-12">
               <div className="max-w-none xl:max-w-6xl 2xl:max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
@@ -505,7 +506,7 @@ export const ApiDocs: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full p-8">
+            <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center max-w-md">
                 <div className="bg-dark-surface rounded-full p-8 mb-6 mx-auto w-fit">
                   <Globe className="w-16 h-16 text-cyber-gray mx-auto" />
@@ -520,6 +521,7 @@ export const ApiDocs: React.FC = () => {
               </div>
             </div>
           )}
+          <Footer />
         </div>
       </div>
     </div>

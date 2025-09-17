@@ -77,7 +77,7 @@ const { data, error } = await supabase
     <div className="min-h-screen bg-dark-bg">
       {/* Grid Background */}
       <div className="fixed inset-0 grid-background opacity-30 pointer-events-none" />
-      
+
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
@@ -125,7 +125,7 @@ const { data, error } = await supabase
               Supabase 提供了构建现代应用所需的全套后端服务
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
               <Card key={index} className="group hover:scale-105 transition-all duration-300">
@@ -175,7 +175,7 @@ const { data, error } = await supabase
                 <CardDescription className="text-base leading-relaxed">
                   这是一个公开的 API 密钥，可以安全地在客户端代码中使用。它受到行级安全策略 (RLS) 的保护。
                 </CardDescription>
-                
+
                 <div className="space-y-3">
                   <h4 className="text-lg font-semibold text-cyber-light">适用场景：</h4>
                   <ul className="space-y-2 text-cyber-gray">
@@ -199,7 +199,7 @@ const { data, error } = await supabase
                 </div>
 
                 <div className="bg-dark-surface/50 p-4 rounded-lg">
-                  <CodeBlock 
+                  <CodeBlock
                     code={`// 客户端使用示例
 const supabase = createClient(
   'https://your-project.supabase.co',
@@ -225,7 +225,7 @@ const supabase = createClient(
                 <CardDescription className="text-base leading-relaxed">
                   这是一个私有的 API 密钥，拥有完全的数据库访问权限，绕过所有 RLS 策略。仅用于服务端环境。
                 </CardDescription>
-                
+
                 <div className="space-y-3">
                   <h4 className="text-lg font-semibold text-cyber-light">适用场景：</h4>
                   <ul className="space-y-2 text-cyber-gray">
@@ -249,7 +249,7 @@ const supabase = createClient(
                 </div>
 
                 <div className="bg-dark-surface/50 p-4 rounded-lg">
-                  <CodeBlock 
+                  <CodeBlock
                     code={`// 服务端使用示例 (Node.js)
 const supabase = createClient(
   process.env.SUPABASE_URL,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Navbar } from '@/components/layout/navbar'
+import { Footer } from '@/components/layout/footer'
 import { Home } from '@/pages/home'
 import { ApiDocs } from '@/pages/api-docs'
 import { ApiTesting } from '@/pages/api-testing'
@@ -21,9 +22,12 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg">
+    <div className="min-h-screen bg-dark-bg flex flex-col">
       <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
-      {renderPage()}
+      <main className="flex-1">
+        {renderPage()}
+      </main>
+      {currentPage !== 'docs' && <Footer />}
     </div>
   )
 }
