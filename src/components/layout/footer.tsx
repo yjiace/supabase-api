@@ -6,9 +6,9 @@ export const Footer: React.FC = () => {
   return (
     <footer className="mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Bottom Section */}
-        <div className="flex flex-col sm:flex-row justify-center md:justify-between items-center space-y-3 sm:space-y-0 text-xs text-cyber-gray">
-          <div className="text-center md:text-left">
+        {/* Bottom Section - 全部内容居中 */}
+        <div className="flex flex-col items-center space-y-3 text-xs text-cyber-gray">
+          <div className="text-center">
             <div className="text-cyber-gray text-sm">
               © {currentYear} Supabase API 演示平台. 保留所有权利.
             </div>
