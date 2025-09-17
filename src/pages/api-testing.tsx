@@ -343,6 +343,42 @@ export const ApiTesting: React.FC = () => {
     }
   }
 
+  // Validate parameter based on type and constraints
+  const validateParameter = (param: any, value: string): { isValid: boolean; error?: string } => {
+    if (!value && param.required) {
+      return { isValid: false, error: '此参数为必填项' }
+    }
+    
+    if (!value) return { isValid: true }
+    
+    // Type-specific validation
+    switch (param.type) {
+      case 'number':
+        if (isNaN(Number(value))) {
+          return { isValid: false, error: '请输入有效的数字' }
+        }
+        break
+      case 'boolean':
+        if (!['true', 'false', '1', '0'].includes(value.toLowerCase())) {
+          return { isValid: false, error: '请输入 true/false 或 1/0' }
+        }
+        break
+      case 'email':
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(value)) {
+          return { isValid: false, error: '请输入有效的邮箱地址' }
+        }
+        break
+    }
+    
+    // Special parameter validation
+    if (param.name === 'filter' || param.name === 'column_filter' || param.description.includes('过滤条件')) {
+      return validateFilterParameter(value)
+    }
+    
+    return { isValid: true }
+  }
+
   const buildRequestUrl = () => {
     if (!selectedEndpoint) return ''
     
@@ -392,7 +428,7 @@ export const ApiTesting: React.FC = () => {
       Object.entries(testRequest.parameters).forEach(([key, value]) => {
         if (value && !selectedEndpoint.path.includes(`{${key}}`)) {
           // Handle special Supabase parameters
-          if (key === 'filter') {
+          if (key === 'filter' || key === 'column_filter') {
             // Filter parameter should be in format: column=operator.value
             // Split by first '=' to get column name and operator.value
             const filterParts = value.split('=')
@@ -491,18 +527,10 @@ export const ApiTesting: React.FC = () => {
     if (selectedEndpoint.parameters) {
       selectedEndpoint.parameters.forEach(param => {
         const value = testRequest.parameters[param.name] || ''
+        const validation = validateParameter(param, value)
         
-        // Check required parameters
-        if (param.required && !value) {
-          parameterErrors.push(`参数 "${param.name}" 是必需的`)
-        }
-        
-        // Validate filter parameters
-        if (value && (param.name === 'filter' || param.description.includes('过滤条件'))) {
-          const validation = validateFilterParameter(value)
-          if (!validation.isValid && validation.error) {
-            parameterErrors.push(`参数 "${param.name}": ${validation.error}`)
-          }
+        if (!validation.isValid && validation.error) {
+          parameterErrors.push(`参数 "${param.name}": ${validation.error}`)
         }
       })
     }
@@ -864,8 +892,7 @@ export const ApiTesting: React.FC = () => {
                         <div className="space-y-3">
                           {selectedEndpoint.parameters.map((param) => {
                             const currentValue = testRequest.parameters[param.name] || ''
-                            const isFilterParam = param.name === 'filter' || param.description.includes('过滤条件')
-                            const validation = isFilterParam ? validateFilterParameter(currentValue) : { isValid: true }
+                            const validation = validateParameter(param, currentValue)
                             
                             return (
                               <div key={param.name}>
@@ -880,9 +907,45 @@ export const ApiTesting: React.FC = () => {
                                   onChange={(e) => handleParameterChange(param.name, e.target.value)}
                                   className={!validation.isValid ? 'border-red-500 focus:border-red-500' : ''}
                                 />
-                                {isFilterParam && (
+                                {/* Parameter-specific help text */}
+                                {(param.name === 'filter' || param.name === 'column_filter') && (
                                   <div className="mt-1 text-xs text-cyber-gray">
                                     格式: column=operator.value (如: name=eq.John, age=gt.18, status=in.(active,pending))
+                                  </div>
+                                )}
+                                {param.name === 'select' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    选择字段: id,name,email 或关联查询: id,name,profiles(avatar_url)
+                                  </div>
+                                )}
+                                {param.name === 'order' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    排序格式: column_name.asc 或 column_name.desc
+                                  </div>
+                                )}
+                                {param.name === 'range' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    范围格式: start-end (如: 0-9 表示前10条记录)
+                                  </div>
+                                )}
+                                {param.name === 'onConflict' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    指定冲突解决的列名 (如: email, id)
+                                  </div>
+                                )}
+                                {param.name === 'count' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    计数选项: exact (精确计数) 或 planned (估算计数)
+                                  </div>
+                                )}
+                                {param.name === 'prefer' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    首选项: return=representation (返回数据) 或 return=minimal (仅返回状态)
+                                  </div>
+                                )}
+                                {param.type === 'boolean' && (
+                                  <div className="mt-1 text-xs text-cyber-gray">
+                                    布尔值: true/false 或 1/0
                                   </div>
                                 )}
                                 {!validation.isValid && validation.error && (
@@ -890,7 +953,7 @@ export const ApiTesting: React.FC = () => {
                                     {validation.error}
                                   </div>
                                 )}
-                                {param.description && !isFilterParam && (
+                                {param.description && !['filter', 'column_filter', 'select', 'order', 'range', 'onConflict', 'count', 'prefer'].includes(param.name) && param.type !== 'boolean' && (
                                   <div className="mt-1 text-xs text-cyber-gray">
                                     {param.description}
                                   </div>

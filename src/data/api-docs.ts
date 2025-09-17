@@ -78,10 +78,10 @@ export const apiCategories: ApiCategory[] = [
             example: 'id,name,email,profiles(avatar_url)'
           },
           {
-            name: 'filter',
+            name: 'column_filter',
             type: 'string',
             required: false,
-            description: '过滤条件，格式：column=operator.value',
+            description: '列过滤条件，直接作为查询参数，格式：column=operator.value',
             example: 'name=eq.John'
           },
           {
@@ -104,6 +104,20 @@ export const apiCategories: ApiCategory[] = [
             required: false,
             description: '跳过的记录数',
             example: '20'
+          },
+          {
+            name: 'range',
+            type: 'string',
+            required: false,
+            description: '范围查询，格式：start-end',
+            example: '0-9'
+          },
+          {
+            name: 'prefer',
+            type: 'string',
+            required: false,
+            description: '首选项设置，如返回格式',
+            example: 'return=representation'
           }
         ],
         responses: [
@@ -204,6 +218,27 @@ export const apiCategories: ApiCategory[] = [
             required: true,
             description: '表名',
             example: 'users'
+          },
+          {
+            name: 'select',
+            type: 'string',
+            required: false,
+            description: '选择要返回的列',
+            example: 'id,name,email'
+          },
+          {
+            name: 'count',
+            type: 'string',
+            required: false,
+            description: '返回计数类型',
+            example: 'exact'
+          },
+          {
+            name: 'prefer',
+            type: 'string',
+            required: false,
+            description: '首选项设置，如返回格式',
+            example: 'return=representation'
           }
         ],
         requestBody: {
@@ -309,6 +344,34 @@ export const apiCategories: ApiCategory[] = [
             required: true,
             description: '表名',
             example: 'users'
+          },
+          {
+            name: 'column_filter',
+            type: 'string',
+            required: true,
+            description: '过滤条件（必需），格式：column=operator.value',
+            example: 'id=eq.1'
+          },
+          {
+            name: 'select',
+            type: 'string',
+            required: false,
+            description: '选择要返回的列',
+            example: 'id,name,email'
+          },
+          {
+            name: 'count',
+            type: 'string',
+            required: false,
+            description: '返回计数类型',
+            example: 'exact'
+          },
+          {
+            name: 'prefer',
+            type: 'string',
+            required: false,
+            description: '首选项设置，如返回格式',
+            example: 'return=representation'
           }
         ],
         requestBody: {
@@ -385,6 +448,41 @@ export const apiCategories: ApiCategory[] = [
             required: true,
             description: '表名',
             example: 'users'
+          },
+          {
+            name: 'onConflict',
+            type: 'string',
+            required: false,
+            description: '冲突时的处理列，指定唯一约束列',
+            example: 'email'
+          },
+          {
+            name: 'ignoreDuplicates',
+            type: 'boolean',
+            required: false,
+            description: '是否忽略重复数据',
+            example: 'false'
+          },
+          {
+            name: 'count',
+            type: 'string',
+            required: false,
+            description: '返回计数类型',
+            example: 'exact'
+          },
+          {
+            name: 'select',
+            type: 'string',
+            required: false,
+            description: '选择要返回的列',
+            example: 'id,name,email'
+          },
+          {
+            name: 'prefer',
+            type: 'string',
+            required: false,
+            description: '首选项设置，如返回格式和冲突解决',
+            example: 'return=representation'
           }
         ],
         requestBody: {
@@ -430,15 +528,60 @@ export const apiCategories: ApiCategory[] = [
 ]`
           },
           {
-            title: '批量 Upsert',
-            description: '批量插入或更新多条记录',
+            title: '指定冲突列的 Upsert',
+            description: '基于邮箱唯一约束进行upsert操作',
             request: `const { data, error } = await supabase
+  .from('users')
+  .upsert({ 
+    name: 'John Smith', 
+    email: 'john@example.com',
+    age: 30
+  }, { 
+    onConflict: 'email' 
+  })
+  .select()`,
+            response: `[
+  {
+    "id": 1,
+    "name": "John Smith",
+    "email": "john@example.com",
+    "age": 30,
+    "updated_at": "2023-01-01T12:00:00.000Z"
+  }
+]`
+          },
+          {
+            title: '忽略重复数据的 Upsert',
+            description: '当数据重复时忽略插入',
+            request: `const { data, error } = await supabase
+  .from('users')
+  .upsert([
+    { email: 'john@example.com', name: 'John' },
+    { email: 'jane@example.com', name: 'Jane' }
+  ], { 
+    onConflict: 'email',
+    ignoreDuplicates: true 
+  })
+  .select()`,
+            response: `[
+  {
+    "id": 2,
+    "name": "Jane",
+    "email": "jane@example.com",
+    "created_at": "2023-01-01T12:00:00.000Z"
+  }
+]`
+          },
+          {
+            title: '批量 Upsert 带计数',
+            description: '批量插入或更新多条记录并返回计数',
+            request: `const { data, error, count } = await supabase
   .from('users')
   .upsert([
     { id: 1, name: 'John Updated' },
     { id: 2, name: 'Alice Updated' },
     { name: 'New User', email: 'new@example.com' }
-  ])
+  ], { count: 'exact' })
   .select()`,
             response: `[
   {
@@ -470,6 +613,34 @@ export const apiCategories: ApiCategory[] = [
             required: true,
             description: '表名',
             example: 'users'
+          },
+          {
+            name: 'column_filter',
+            type: 'string',
+            required: true,
+            description: '过滤条件（必需），格式：column=operator.value',
+            example: 'id=eq.1'
+          },
+          {
+            name: 'select',
+            type: 'string',
+            required: false,
+            description: '选择要返回的列',
+            example: 'id,name,email'
+          },
+          {
+            name: 'count',
+            type: 'string',
+            required: false,
+            description: '返回计数类型',
+            example: 'exact'
+          },
+          {
+            name: 'prefer',
+            type: 'string',
+            required: false,
+            description: '首选项设置，如返回格式',
+            example: 'return=representation'
           }
         ],
         responses: [
@@ -527,6 +698,20 @@ export const apiCategories: ApiCategory[] = [
             required: true,
             description: '函数名称',
             example: 'hello_world'
+          },
+          {
+            name: 'count',
+            type: 'string',
+            required: false,
+            description: '返回计数类型',
+            example: 'exact'
+          },
+          {
+            name: 'prefer',
+            type: 'string',
+            required: false,
+            description: '首选项设置',
+            example: 'return=representation'
           }
         ],
         requestBody: {
@@ -1030,6 +1215,20 @@ subscription.unsubscribe()`,
             required: false,
             description: '登录成功后的重定向URL',
             example: 'https://yourapp.com/dashboard'
+          },
+          {
+            name: 'scopes',
+            type: 'string',
+            required: false,
+            description: '请求的权限范围',
+            example: 'repo user'
+          },
+          {
+            name: 'query_params',
+            type: 'object',
+            required: false,
+            description: '额外的查询参数',
+            example: '{"access_type": "offline"}'
           }
         ],
         responses: [
@@ -2793,6 +2992,27 @@ presenceChannel.track({
             required: true,
             description: '文件路径',
             example: 'user123/avatar.jpg'
+          },
+          {
+            name: 'cacheControl',
+            type: 'string',
+            required: false,
+            description: '缓存控制头',
+            example: '3600'
+          },
+          {
+            name: 'contentType',
+            type: 'string',
+            required: false,
+            description: '文件MIME类型',
+            example: 'image/jpeg'
+          },
+          {
+            name: 'upsert',
+            type: 'boolean',
+            required: false,
+            description: '是否覆盖已存在的文件',
+            example: 'false'
           }
         ],
         requestBody: {
@@ -2921,7 +3141,7 @@ if (data) {
       {
         id: 'storage-list',
         name: '列出存储桶中的所有文件',
-        method: 'POST',
+        method: 'GET',
         path: '/storage/v1/object/list/{bucket_id}',
         description: '列出存储桶中指定路径下的所有文件',
         officialDocs: 'https://supabase.com/docs/reference/javascript/storage-from-list',

@@ -240,8 +240,8 @@ export const ApiDocs: React.FC = () => {
                             key={endpoint.id}
                             onClick={() => setSelectedEndpoint(endpoint)}
                             className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-all duration-200 ${selectedEndpoint?.id === endpoint.id
-                                ? 'bg-neon-green/10 border-l-2 border-neon-green text-neon-green'
-                                : 'hover:bg-dark-border text-cyber-gray hover:text-cyber-light'
+                              ? 'bg-neon-green/10 border-l-2 border-neon-green text-neon-green'
+                              : 'hover:bg-dark-border text-cyber-gray hover:text-cyber-light'
                               }`}
                           >
                             <div className="flex items-center space-x-2">
