@@ -229,72 +229,92 @@ export const ApiDocs: React.FC = () => {
 
             {/* Search */}
             <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-cyber-gray w-4 h-4" />
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-cyber-gray">
+                <Search className="w-4 h-4" />
+              </div>
               <Input
                 placeholder="搜索接口..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-12 pr-4 py-3 rounded-xl bg-dark-surface/50 border-dark-border/50 focus:border-neon-green/50 focus:bg-dark-surface/80 transition-all duration-300 backdrop-blur-sm"
               />
             </div>
 
             {/* API Categories */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredCategories.map((category) => {
                 const IconComponent = categoryIcons[category.id as keyof typeof categoryIcons] || Server
                 const isExpanded = expandedCategories.has(category.id)
 
                 return (
-                  <div key={category.id}>
+                  <div key={category.id} className="bg-dark-surface/30 rounded-xl border border-dark-border/50 overflow-hidden backdrop-blur-sm">
                     <div className="flex items-center">
                       <button
                         onClick={() => toggleCategory(category.id)}
-                        className="flex-1 flex items-center justify-between p-3 rounded-lg hover:bg-dark-border transition-colors text-left"
+                        className="flex-1 flex items-center justify-between p-4 hover:bg-dark-border/50 transition-all duration-300 text-left group"
                       >
                         <div className="flex items-center space-x-3">
-                          <IconComponent className="w-5 h-5 text-neon-green" />
+                          <div className="p-2 rounded-xl bg-neon-green/10 group-hover:bg-neon-green/20 transition-colors duration-300">
+                            <IconComponent className="w-5 h-5 text-neon-green" />
+                          </div>
                           <div>
-                            <div className="font-medium text-cyber-light">{category.name}</div>
-                            <div className="text-xs text-cyber-gray">{category.endpoints.length} 个接口</div>
+                            <div className="font-semibold text-cyber-light group-hover:text-white transition-colors duration-300">{category.name}</div>
+                            <div className="text-xs text-cyber-gray group-hover:text-cyber-light transition-colors duration-300">{category.endpoints.length} 个接口</div>
                           </div>
                         </div>
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-cyber-gray" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-cyber-gray" />
-                        )}
+                        <div className="p-1 rounded-lg group-hover:bg-dark-border/30 transition-colors duration-300">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-cyber-gray group-hover:text-cyber-light transition-colors duration-300" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-cyber-gray group-hover:text-cyber-light transition-colors duration-300" />
+                          )}
+                        </div>
                       </button>
-                      {category.officialDocs && (
-                        <a
-                          href={category.officialDocs}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ml-2 p-2 hover:bg-neon-green/10 rounded-md transition-colors group"
-                          title="查看官方文档"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="w-3 h-3 text-cyber-gray group-hover:text-neon-green" />
-                        </a>
-                      )}
+                      {/* {category.officialDocs && (
+                        <div className="pr-3">
+                          <a
+                            href={category.officialDocs}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2.5 hover:bg-neon-green/10 rounded-xl transition-all duration-300 group inline-block"
+                            title="查看官方文档"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-cyber-gray group-hover:text-neon-green transition-colors duration-300" />
+                          </a>
+                        </div>
+                      )} */}
                     </div>
 
                     {isExpanded && (
-                      <div className="ml-8 mt-2 space-y-1">
+                      <div className="px-4 pb-3 space-y-1.5 bg-dark-surface/20">
                         {category.endpoints.map((endpoint) => (
                           <button
                             key={endpoint.id}
                             onClick={() => setSelectedEndpoint(endpoint)}
-                            className={`w-full flex items-center justify-between p-2 rounded-md text-left transition-all duration-200 ${selectedEndpoint?.id === endpoint.id
-                              ? 'bg-neon-green/10 border-l-2 border-neon-green text-neon-green'
-                              : 'hover:bg-dark-border text-cyber-gray hover:text-cyber-light'
+                            className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all duration-300 group ${selectedEndpoint?.id === endpoint.id
+                              ? 'bg-gradient-to-r from-neon-green/15 to-neon-green/5 border border-neon-green/30 text-neon-green shadow-lg shadow-neon-green/10'
+                              : 'hover:bg-dark-border/40 text-cyber-gray hover:text-cyber-light hover:shadow-md'
                               }`}
                           >
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={methodColors[endpoint.method]} className="text-xs">
+                            <div className="flex items-center space-x-3">
+                              <Badge 
+                                variant={methodColors[endpoint.method]} 
+                                className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-all duration-300 ${
+                                  selectedEndpoint?.id === endpoint.id ? 'shadow-sm' : ''
+                                }`}
+                              >
                                 {endpoint.method}
                               </Badge>
-                              <span className="text-sm">{endpoint.name}</span>
+                              <span className={`text-sm font-medium transition-all duration-300 ${
+                                selectedEndpoint?.id === endpoint.id ? 'text-neon-green' : 'group-hover:text-white'
+                              }`}>
+                                {endpoint.name}
+                              </span>
                             </div>
+                            {selectedEndpoint?.id === endpoint.id && (
+                              <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse"></div>
+                            )}
                           </button>
                         ))}
                       </div>
