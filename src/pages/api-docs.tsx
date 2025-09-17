@@ -122,57 +122,62 @@ export const ApiDocs: React.FC = () => {
     const description = endpoint.description.toLowerCase()
 
     // REST API 管理接口需要使用 Personal Access Token (PAT)
-    // 包括项目管理、组织管理、分析统计、配置管理等
-    if (path.startsWith('/v1/') || 
-        path.includes('/v1/projects/') ||
-        path.includes('/v1/organizations/') ||
-        path.includes('/v1/snippets/') ||
-        path.match(/^\/v\d+\//)) {
+    // 这些是 Supabase 平台管理 API，用于项目管理、组织管理、分析统计等
+    if (path.startsWith('/v1/') || path.match(/^\/v\d+\//)) {
       return 'pat'
     }
 
     // 管理员操作需要服务密钥（仅限于 Supabase SDK 内部管理操作）
+    // 这些通常是需要绕过 RLS 的操作或管理用户的操作
     if (path.includes('/admin/') ||
       (name.includes('管理') && !path.startsWith('/v1/')) ||
       name.includes('删除用户') ||
       name.includes('重置密码') ||
       description.includes('管理员') ||
       description.includes('服务端') ||
+      description.includes('绕过') ||
       (endpoint.method === 'DELETE' && path.includes('/auth/'))) {
       return 'service_role'
     }
 
-    // 数据库函数、扩展、迁移等通常需要服务密钥
-    if (path.includes('/rpc/') && (name.includes('系统') || description.includes('管理'))) {
-      return 'service_role'
+    // 数据库 RPC 函数调用 - 根据具体功能判断
+    if (path.includes('/rpc/')) {
+      if (name.includes('系统') || description.includes('管理') || description.includes('服务端')) {
+        return 'service_role'
+      }
+      return 'both' // 大部分 RPC 函数两种密钥都可以使用
     }
 
-    // 用户认证相关的大部分操作可以用匿名密钥
-    if (path.includes('/auth/') && !name.includes('管理')) {
+    // 用户认证相关操作 - 大部分可以用匿名密钥
+    if (path.includes('/auth/v1/')) {
+      // 特殊的管理操作需要服务密钥
+      if (name.includes('管理') || description.includes('管理员')) {
+        return 'service_role'
+      }
       return 'anon'
     }
 
-    // 数据库操作（通过 PostgREST）通常两种密钥都可以，但有RLS保护
+    // 数据库操作（通过 PostgREST）- 两种密钥都可以，但受 RLS 保护
     if (path.includes('/rest/v1/')) {
       return 'both'
     }
 
-    // 存储操作通常用匿名密钥
-    if (path.includes('/storage/')) {
+    // 存储操作 - 通常用匿名密钥，受 RLS 和存储策略保护
+    if (path.includes('/storage/v1/')) {
       return 'anon'
     }
 
-    // 实时订阅用匿名密钥
-    if (path.includes('/realtime/')) {
+    // 实时订阅 - 用匿名密钥
+    if (path.includes('/realtime/v1/')) {
       return 'anon'
     }
 
-    // 边缘函数调用用匿名密钥
-    if (path.includes('/functions/')) {
+    // 边缘函数调用 - 用匿名密钥
+    if (path.includes('/functions/v1/')) {
       return 'anon'
     }
 
-    // 默认返回both
+    // 默认返回both（适用于一些通用的 SDK 操作）
     return 'both'
   }
 
