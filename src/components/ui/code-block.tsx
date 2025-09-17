@@ -67,6 +67,19 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           {code}
         </code>
       </pre>
+      {showCopy && (
+        <button
+          onClick={handleCopy}
+          className="absolute top-2 right-2 p-2 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+          title="复制代码"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-400" />
+          ) : (
+            <Copy className="w-4 h-4 text-gray-400" />
+          )}
+        </button>
+      )}
     </div>
   )
 }
