@@ -116,19 +116,29 @@ export const ApiDocs: React.FC = () => {
   } as const
 
   // 根据接口路径和功能判断所需的密钥类型
-  const getRequiredKeyType = (endpoint: ApiEndpoint): 'anon' | 'service_role' | 'both' => {
+  const getRequiredKeyType = (endpoint: ApiEndpoint): 'anon' | 'service_role' | 'both' | 'pat' => {
     const path = endpoint.path.toLowerCase()
     const name = endpoint.name.toLowerCase()
     const description = endpoint.description.toLowerCase()
 
-    // 管理员操作需要服务密钥
+    // REST API 管理接口需要使用 Personal Access Token (PAT)
+    // 包括项目管理、组织管理、分析统计、配置管理等
+    if (path.startsWith('/v1/') || 
+        path.includes('/v1/projects/') ||
+        path.includes('/v1/organizations/') ||
+        path.includes('/v1/snippets/') ||
+        path.match(/^\/v\d+\//)) {
+      return 'pat'
+    }
+
+    // 管理员操作需要服务密钥（仅限于 Supabase SDK 内部管理操作）
     if (path.includes('/admin/') ||
-      name.includes('管理') ||
+      (name.includes('管理') && !path.startsWith('/v1/')) ||
       name.includes('删除用户') ||
       name.includes('重置密码') ||
       description.includes('管理员') ||
       description.includes('服务端') ||
-      endpoint.method === 'DELETE' && path.includes('/auth/')) {
+      (endpoint.method === 'DELETE' && path.includes('/auth/'))) {
       return 'service_role'
     }
 
@@ -142,7 +152,7 @@ export const ApiDocs: React.FC = () => {
       return 'anon'
     }
 
-    // 数据库操作通常两种密钥都可以，但有RLS保护
+    // 数据库操作（通过 PostgREST）通常两种密钥都可以，但有RLS保护
     if (path.includes('/rest/v1/')) {
       return 'both'
     }
@@ -166,28 +176,42 @@ export const ApiDocs: React.FC = () => {
     return 'both'
   }
 
-  const getKeyTypeInfo = (keyType: 'anon' | 'service_role' | 'both') => {
+  const getKeyTypeInfo = (keyType: 'anon' | 'service_role' | 'both' | 'pat') => {
     switch (keyType) {
       case 'anon':
         return {
           label: '匿名密钥',
-          color: 'success',
+          color: 'success' as const,
           icon: Key,
           description: '客户端安全，受RLS保护'
         }
       case 'service_role':
         return {
           label: '服务密钥',
-          color: 'error',
+          color: 'error' as const,
           icon: Shield,
           description: '服务端专用，完全访问权限'
         }
       case 'both':
         return {
           label: '两种密钥',
-          color: 'warning',
+          color: 'warning' as const,
           icon: Key,
           description: '匿名密钥或服务密钥均可'
+        }
+      case 'pat':
+        return {
+          label: 'PAT 密钥',
+          color: 'default' as const,
+          icon: Key,
+          description: 'Personal Access Token，用于 REST API'
+        }
+      default:
+        return {
+          label: '未知密钥',
+          color: 'default' as const,
+          icon: Key,
+          description: '未知密钥类型'
         }
     }
   }
@@ -351,7 +375,7 @@ export const ApiDocs: React.FC = () => {
                           <IconComponent className="w-4 h-4 text-cyber-gray" />
                           <span className="text-sm text-cyber-gray">所需密钥:</span>
                         </div>
-                        <Badge variant={keyInfo.color as "success" | "error" | "warning" | "default" | "info"} className="flex items-center space-x-1">
+                        <Badge variant={keyInfo.color} className="flex items-center space-x-1">
                           <IconComponent className="w-3 h-3" />
                           <span>{keyInfo.label}</span>
                         </Badge>
