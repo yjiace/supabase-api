@@ -176,11 +176,11 @@ export const ApiDocs: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
-      <div className="flex h-screen">
+      <div className="flex flex-col lg:flex-row h-screen">
         {/* Left Sidebar - API Navigation */}
-        <div className="w-80 xl:w-96 bg-dark-surface border-r border-dark-border overflow-y-auto flex-shrink-0">
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-cyber-light mb-4">API 文档</h2>
+        <div className="w-full lg:w-80 xl:w-96 bg-dark-surface border-r border-dark-border overflow-y-auto flex-shrink-0 lg:h-full max-h-96 lg:max-h-none">
+          <div className="p-4 lg:p-6">
+            <h2 className="text-xl lg:text-2xl font-bold text-cyber-light mb-4">API 文档</h2>
 
             {/* Search */}
             <div className="relative mb-6">
@@ -262,9 +262,9 @@ export const ApiDocs: React.FC = () => {
         </div>
 
         {/* Right Content - API Details */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto lg:h-full">
           {selectedEndpoint ? (
-            <div className="p-6 lg:p-8 xl:p-12">
+            <div className="p-4 sm:p-6 lg:p-8 xl:p-12">
               <div className="max-w-none xl:max-w-6xl 2xl:max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
@@ -323,114 +323,108 @@ export const ApiDocs: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Content Grid Layout for Large Screens */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                  {/* Left Column */}
-                  <div className="space-y-8">
-                    {/* Parameters */}
-                    {selectedEndpoint.parameters && selectedEndpoint.parameters.length > 0 && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>请求参数</CardTitle>
-                          <CardDescription>接口所需的参数信息</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead>
-                                <tr className="border-b border-dark-border">
-                                  <th className="text-left py-2 text-cyber-light font-medium text-sm">参数名</th>
-                                  <th className="text-left py-2 text-cyber-light font-medium text-sm">类型</th>
-                                  <th className="text-left py-2 text-cyber-light font-medium text-sm">必填</th>
-                                  <th className="text-left py-2 text-cyber-light font-medium text-sm">说明</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {selectedEndpoint.parameters.map((param, index) => (
-                                  <tr key={index} className="border-b border-dark-border/50">
-                                    <td className="py-3 text-neon-green font-mono text-xs">{param.name}</td>
-                                    <td className="py-3 text-cyber-gray text-xs">{param.type}</td>
-                                    <td className="py-3">
-                                      <Badge variant={param.required ? 'error' : 'default'} className="text-xs">
-                                        {param.required ? '必填' : '可选'}
-                                      </Badge>
-                                    </td>
-                                    <td className="py-3 text-cyber-gray text-xs">{param.description}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                          {/* Parameter Examples */}
-                          <div className="mt-4 space-y-2">
-                            <h5 className="text-sm font-medium text-cyber-light">参数示例</h5>
-                            <div className="bg-dark-bg rounded-md p-3 space-y-1">
-                              {selectedEndpoint.parameters.map((param, index) => (
-                                <div key={index} className="text-xs font-mono text-cyber-gray">
-                                  <span className="text-neon-green">{param.name}</span>: {param.example}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Request Body */}
-                    {selectedEndpoint.requestBody && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>请求体</CardTitle>
-                          <CardDescription>{selectedEndpoint.requestBody.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="mb-4">
-                            <Badge variant="info" className="mb-2">
-                              {selectedEndpoint.requestBody.type}
-                            </Badge>
-                          </div>
-                          <CodeBlock
-                            code={JSON.stringify(selectedEndpoint.requestBody.example, null, 2)}
-                            language="json"
-                          />
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-8">
-                    {/* Responses */}
+                {/* Content Layout - Responsive */}
+                <div className="space-y-8">
+                  {/* Parameters */}
+                  {selectedEndpoint.parameters && selectedEndpoint.parameters.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>响应</CardTitle>
-                        <CardDescription>接口可能返回的响应信息</CardDescription>
+                        <CardTitle>请求参数</CardTitle>
+                        <CardDescription>接口所需的参数信息</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="space-y-6">
-                          {selectedEndpoint.responses.map((response, index) => (
-                            <div key={index}>
-                              <div className="flex items-center space-x-2 mb-3">
-                                <Badge
-                                  variant={response.status >= 200 && response.status < 300 ? 'success' : 'error'}
-                                  className="text-sm"
-                                >
-                                  {response.status}
-                                </Badge>
-                                <span className="text-cyber-light font-medium text-sm">{response.description}</span>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b border-dark-border">
+                                <th className="text-left py-2 text-cyber-light font-medium text-sm">参数名</th>
+                                <th className="text-left py-2 text-cyber-light font-medium text-sm">类型</th>
+                                <th className="text-left py-2 text-cyber-light font-medium text-sm">必填</th>
+                                <th className="text-left py-2 text-cyber-light font-medium text-sm">说明</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedEndpoint.parameters.map((param, index) => (
+                                <tr key={index} className="border-b border-dark-border/50">
+                                  <td className="py-3 text-neon-green font-mono text-sm">{param.name}</td>
+                                  <td className="py-3 text-cyber-gray text-sm">{param.type}</td>
+                                  <td className="py-3">
+                                    <Badge variant={param.required ? 'error' : 'default'} className="text-xs">
+                                      {param.required ? '必填' : '可选'}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 text-cyber-gray text-sm">{param.description}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {/* Parameter Examples */}
+                        <div className="mt-4 space-y-2">
+                          <h5 className="text-sm font-medium text-cyber-light">参数示例</h5>
+                          <div className="bg-dark-bg rounded-md p-3 space-y-1">
+                            {selectedEndpoint.parameters.map((param, index) => (
+                              <div key={index} className="text-sm font-mono text-cyber-gray">
+                                <span className="text-neon-green">{param.name}</span>: {param.example}
                               </div>
-                              {response.example && (
-                                <CodeBlock
-                                  code={JSON.stringify(response.example, null, 2)}
-                                  language="json"
-                                />
-                              )}
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
+                  )}
+
+                  {/* Request Body */}
+                  {selectedEndpoint.requestBody && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>请求体</CardTitle>
+                        <CardDescription>{selectedEndpoint.requestBody.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="mb-4">
+                          <Badge variant="info" className="mb-2">
+                            {selectedEndpoint.requestBody.type}
+                          </Badge>
+                        </div>
+                        <CodeBlock
+                          code={JSON.stringify(selectedEndpoint.requestBody.example, null, 2)}
+                          language="json"
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Responses */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>响应</CardTitle>
+                      <CardDescription>接口可能返回的响应信息</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {selectedEndpoint.responses.map((response, index) => (
+                          <div key={index}>
+                            <div className="flex items-center space-x-2 mb-3">
+                              <Badge
+                                variant={response.status >= 200 && response.status < 300 ? 'success' : 'error'}
+                                className="text-sm"
+                              >
+                                {response.status}
+                              </Badge>
+                              <span className="text-cyber-light font-medium text-sm">{response.description}</span>
+                            </div>
+                            {response.example && (
+                              <CodeBlock
+                                code={JSON.stringify(response.example, null, 2)}
+                                language="json"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
 
                 {/* Examples - Full Width */}
@@ -447,7 +441,7 @@ export const ApiDocs: React.FC = () => {
                             <h4 className="text-lg font-semibold text-cyber-light mb-2">{example.title}</h4>
                             <p className="text-cyber-gray mb-4">{example.description}</p>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-6 xl:grid xl:grid-cols-2 xl:gap-6 xl:space-y-0">
                               <div>
                                 <h5 className="text-sm font-medium text-cyber-light mb-2">请求示例</h5>
                                 <CodeBlock code={example.request} language="bash" />
