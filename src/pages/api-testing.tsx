@@ -42,6 +42,14 @@ interface RestAuthConfig {
   supabaseManagementUrl: string
 }
 
+interface UserAuthState {
+  isAuthenticated: boolean
+  accessToken: string | null
+  user: any | null
+  email: string
+  password: string
+}
+
 interface TestRequest {
   endpoint: ApiEndpoint
   parameters: Record<string, string>
@@ -87,6 +95,19 @@ export const ApiTesting: React.FC = () => {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<{ request: TestRequest; response: TestResponse; timestamp: Date } | null>(null)
   const [tempServiceKey, setTempServiceKey] = useState('')
   const [showTempServiceKeyInput, setShowTempServiceKeyInput] = useState(false)
+  
+  // 用户认证状态
+  const [userAuth, setUserAuth] = useState<UserAuthState>({
+    isAuthenticated: false,
+    accessToken: null,
+    user: null,
+    email: '',
+    password: ''
+  })
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authLoading, setAuthLoading] = useState(false)
+  const [showTokenInput, setShowTokenInput] = useState(false)
+  const [manualToken, setManualToken] = useState('')
 
   // 判断是否为 REST API 接口
   const isRestApiEndpoint = (endpoint: ApiEndpoint): boolean => {
@@ -94,6 +115,35 @@ export const ApiTesting: React.FC = () => {
       cat.endpoints.some(ep => ep.id === endpoint.id)
     )
     return category?.id.startsWith('rest-') || false
+  }
+
+  // 判断接口是否需要用户认证（受RLS保护）
+  const requiresUserAuth = (endpoint: ApiEndpoint): boolean => {
+    const path = endpoint.path.toLowerCase()
+    const name = endpoint.name.toLowerCase()
+    const description = endpoint.description.toLowerCase()
+    
+    // REST API 接口不需要用户认证
+    if (isRestApiEndpoint(endpoint)) {
+      return false
+    }
+    
+    // 数据库操作通常受RLS保护，需要用户认证
+    if (path.includes('/rest/v1/') && !path.includes('/rpc/')) {
+      return true
+    }
+    
+    // 存储操作受RLS保护
+    if (path.includes('/storage/v1/object/') && endpoint.method !== 'GET') {
+      return true
+    }
+    
+    // 用户相关操作（非管理员操作）
+    if (path.includes('/auth/v1/user') || path.includes('/auth/v1/token')) {
+      return false // 这些是认证接口本身，不需要预先认证
+    }
+    
+    return false
   }
 
   // 根据接口路径和功能判断所需的密钥类型
@@ -216,6 +266,17 @@ export const ApiTesting: React.FC = () => {
       }
     }
 
+    // Load user auth state
+    const savedUserAuth = localStorage.getItem('supabase-user-auth')
+    if (savedUserAuth) {
+      try {
+        const parsedUserAuth = JSON.parse(savedUserAuth)
+        setUserAuth(parsedUserAuth)
+      } catch (error) {
+        console.error('Failed to parse saved user auth:', error)
+      }
+    }
+
     // Load test history from localStorage
     const savedHistory = localStorage.getItem('supabase-api-test-history')
     if (savedHistory) {
@@ -245,6 +306,148 @@ export const ApiTesting: React.FC = () => {
   const saveRestConfig = (newConfig: RestAuthConfig) => {
     setRestConfig(newConfig)
     localStorage.setItem('supabase-rest-api-config', JSON.stringify(newConfig))
+  }
+
+  // Save user auth state to localStorage
+  const saveUserAuth = (newAuth: UserAuthState) => {
+    setUserAuth(newAuth)
+    localStorage.setItem('supabase-user-auth', JSON.stringify(newAuth))
+  }
+
+  // 用户登录
+  const handleUserLogin = async () => {
+    if (!config.supabaseUrl || !config.apiKey) {
+      alert('请先配置Supabase URL和API Key')
+      return
+    }
+
+    if (!userAuth.email || !userAuth.password) {
+      alert('请输入邮箱和密码')
+      return
+    }
+
+    setAuthLoading(true)
+    try {
+      const response = await axios.post(
+        `${config.supabaseUrl.replace(/\/$/, '')}/auth/v1/token?grant_type=password`,
+        {
+          email: userAuth.email,
+          password: userAuth.password
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': config.apiKey,
+            'Authorization': `Bearer ${config.apiKey}`
+          }
+        }
+      )
+
+      const { access_token, user } = response.data
+      const newAuth = {
+        ...userAuth,
+        isAuthenticated: true,
+        accessToken: access_token,
+        user: user
+      }
+      
+      saveUserAuth(newAuth)
+      setShowAuthModal(false)
+      alert('登录成功！')
+    } catch (error: any) {
+      console.error('Login failed:', error)
+      
+      // 检查是否是邮箱确认相关的错误
+      const errorMessage = error.response?.data?.error_description || error.response?.data?.msg || error.message
+      const errorCode = error.response?.data?.error
+      
+      if (errorCode === 'email_not_confirmed' || 
+          errorMessage?.includes('email not confirmed') ||
+          errorMessage?.includes('confirm your email') ||
+          errorMessage?.includes('verification')) {
+        alert(`邮箱验证提醒：
+        
+您的邮箱尚未验证，系统已向 ${userAuth.email} 发送确认邮件。
+
+请按以下步骤操作：
+1. 检查您的邮箱收件箱（包括垃圾邮件文件夹）
+2. 点击确认邮件中的验证链接
+3. 验证完成后，返回此页面重新登录
+
+如果没有收到邮件，请检查邮箱地址是否正确，或稍后重试。`)
+      } else if (errorCode === 'invalid_credentials' || 
+                 errorMessage?.includes('Invalid login credentials') ||
+                 errorMessage?.includes('invalid credentials')) {
+        alert('登录失败：邮箱或密码错误，请检查后重试。')
+      } else if (errorMessage?.includes('too many requests') || 
+                 errorMessage?.includes('rate limit')) {
+        alert('登录失败：请求过于频繁，请稍后再试。')
+      } else {
+        alert(`登录失败: ${errorMessage}`)
+      }
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  // 用户登出
+  const handleUserLogout = () => {
+    const newAuth = {
+      isAuthenticated: false,
+      accessToken: null,
+      user: null,
+      email: '',
+      password: ''
+    }
+    saveUserAuth(newAuth)
+    setManualToken('')
+    setShowTokenInput(false)
+  }
+
+  // 手动输入访问令牌
+  const handleManualTokenLogin = () => {
+    if (!manualToken.trim()) {
+      alert('请输入访问令牌')
+      return
+    }
+
+    // 简单验证令牌格式（JWT通常以ey开头）
+    if (!manualToken.startsWith('ey')) {
+      alert('访问令牌格式不正确，请检查后重试')
+      return
+    }
+
+    try {
+      // 尝试解析JWT payload来获取用户信息
+      const payload = JSON.parse(atob(manualToken.split('.')[1]))
+      const user = {
+        id: payload.sub,
+        email: payload.email || userAuth.email || '用户',
+        exp: payload.exp
+      }
+
+      // 检查令牌是否过期
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        alert('访问令牌已过期，请重新获取')
+        return
+      }
+
+      const newAuth = {
+        ...userAuth,
+        isAuthenticated: true,
+        accessToken: manualToken,
+        user: user
+      }
+      
+      saveUserAuth(newAuth)
+      setShowAuthModal(false)
+      setManualToken('')
+      setShowTokenInput(false)
+      alert('令牌登录成功！')
+    } catch (error) {
+      console.error('Token parsing failed:', error)
+      alert('访问令牌解析失败，请检查令牌是否正确')
+    }
   }
 
   const categoryOptions = apiCategories.map(cat => ({
@@ -298,10 +501,15 @@ export const ApiTesting: React.FC = () => {
           'Authorization': `Bearer ${selectedKey}`
         }
       } else {
+        // 对于需要用户认证的接口，优先使用用户的访问令牌
+        const authToken = (requiresUserAuth(endpoint) && userAuth.isAuthenticated) 
+          ? userAuth.accessToken 
+          : selectedKey
+        
         headers = {
           'Content-Type': 'application/json',
           'apikey': selectedKey,
-          'Authorization': `Bearer ${selectedKey}`
+          'Authorization': `Bearer ${authToken}`
         }
       }
       
@@ -557,10 +765,15 @@ export const ApiTesting: React.FC = () => {
         }
       } else {
         // JS SDK 接口使用 apikey 和 Authorization
+        // 对于需要用户认证的接口，优先使用用户的访问令牌
+        const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
+          ? userAuth.accessToken 
+          : currentApiKey
+        
         headers = {
           ...testRequest.headers,
           'apikey': currentApiKey,
-          'Authorization': `Bearer ${currentApiKey}`
+          'Authorization': `Bearer ${authToken}`
         }
       }
 
@@ -615,6 +828,45 @@ export const ApiTesting: React.FC = () => {
         headers: error.response?.headers || {},
         duration,
         error: error.message
+      }
+
+      // 针对403错误提供RLS相关的解决建议
+      if (error.response?.status === 403 && selectedEndpoint) {
+        const needsAuth = requiresUserAuth(selectedEndpoint)
+        const keyType = getRequiredKeyType(selectedEndpoint)
+        
+        let suggestion = '403 Forbidden - 可能的解决方案:\
+'
+        
+        if (needsAuth && !userAuth.isAuthenticated) {
+          suggestion += '• 此接口受RLS策略保护，需要用户登录认证\
+'
+          suggestion += '• 请点击"用户登录"按钮进行认证\
+'
+        } else if (keyType === 'service_role' && !config.serviceRoleKey && !tempServiceKey) {
+          suggestion += '• 此接口需要服务端密钥来绕过RLS策略\
+'
+          suggestion += '• 请配置服务端密钥或使用临时密钥输入\
+'
+        } else if (needsAuth && userAuth.isAuthenticated) {
+          suggestion += '• 用户已认证但仍被拒绝，可能原因:\
+'
+          suggestion += '  - RLS策略不允许当前用户访问此资源\
+'
+          suggestion += '  - 访问令牌已过期，请重新登录\
+'
+          suggestion += '  - 数据库表未启用RLS或策略配置错误\
+'
+        } else {
+          suggestion += '• 检查API密钥是否正确\
+'
+          suggestion += '• 确认数据库RLS策略配置\
+'
+          suggestion += '• 验证用户权限设置\
+'
+        }
+        
+        errorResponse.error = suggestion
       }
 
       setTestResponse(errorResponse)
@@ -716,6 +968,42 @@ export const ApiTesting: React.FC = () => {
             
             {/* Header Actions */}
             <div className="flex items-center space-x-3">
+              {/* User Auth Status */}
+              <div className="flex items-center space-x-2">
+                {userAuth.isAuthenticated ? (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="success" className="text-xs font-medium px-2 py-1">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      已登录 ({userAuth.user?.email || '用户'})
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUserLogout}
+                      className="text-xs text-cyber-gray hover:text-red-400 border border-transparent hover:border-red-400/30"
+                    >
+                      登出
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="warning" className="text-xs font-medium px-2 py-1">
+                      <Key className="w-3 h-3 mr-1" />
+                      未登录
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAuthModal(true)}
+                      className="flex items-center space-x-1 text-cyber-light hover:text-neon-green border border-transparent hover:border-neon-green/30"
+                    >
+                      <Key className="w-4 h-4" />
+                      <span className="text-sm">用户登录</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {testHistory.length > 0 && (
                 <Button
                   variant="ghost"
@@ -753,6 +1041,8 @@ export const ApiTesting: React.FC = () => {
                 ? (isRestApiEndpoint(selectedEndpoint) ? 'rest-api' : 'js-sdk')
                 : null
             }
+            isUserAuthenticated={userAuth.isAuthenticated}
+            userEmail={userAuth.user?.email}
           />
         </div>
 
@@ -814,12 +1104,13 @@ export const ApiTesting: React.FC = () => {
                         <span className="text-cyber-light font-medium">{selectedEndpoint.name}</span>
                       </div>
                       
-                      {/* API Key Requirement */}
+                      {/* API Key Requirement and RLS Info */}
                       {(() => {
                         const keyType = getRequiredKeyType(selectedEndpoint)
                         const keyInfo = getKeyTypeInfo(keyType)
                         const IconComponent = keyInfo.icon
                         const configStatus = getCurrentConfigStatus()
+                        const needsAuth = requiresUserAuth(selectedEndpoint)
                         
                         return (
                           <div className="mb-3">
@@ -835,7 +1126,52 @@ export const ApiTesting: React.FC = () => {
                                   {configStatus.isValid ? "已配置" : "未配置"}
                                 </Badge>
                               )}
+                              {needsAuth && (
+                                <Badge variant={userAuth.isAuthenticated ? "success" : "warning"} className="text-xs">
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  {userAuth.isAuthenticated ? "已认证" : "需认证"}
+                                </Badge>
+                              )}
                             </div>
+                            
+                            {/* RLS Protection Notice */}
+                            {needsAuth && (
+                              <div className={`flex items-start space-x-2 mt-2 p-3 rounded text-xs ${
+                                userAuth.isAuthenticated 
+                                  ? 'bg-green-500/10 border border-green-500/30 text-green-300'
+                                  : 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-300'
+                              }`}>
+                                <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <div className="font-medium mb-2 flex items-center space-x-2">
+                                    <span>此接口受RLS策略保护</span>
+                                    <Badge variant={userAuth.isAuthenticated ? "success" : "warning"} className="text-xs">
+                                      {userAuth.isAuthenticated ? "✓ 已认证" : "⚠ 需认证"}
+                                    </Badge>
+                                  </div>
+                                  {userAuth.isAuthenticated ? (
+                                    <div className="space-y-1">
+                                      <div className="flex items-center space-x-2">
+                                        <CheckCircle className="w-3 h-3" />
+                                        <span>已使用用户访问令牌 ({userAuth.user?.email})</span>
+                                      </div>
+                                      <div className="text-green-200">将遵循RLS策略限制，只能访问用户有权限的数据</div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <div className="flex items-center space-x-2">
+                                        <AlertTriangle className="w-3 h-3" />
+                                        <span>需要用户登录认证才能访问受保护的数据</span>
+                                      </div>
+                                      <div className="text-yellow-200">
+                                        请点击右上角"用户登录"按钮进行认证，或使用服务密钥绕过RLS
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            
                             {keyInfo.warning && (
                               <div className="flex items-start space-x-2 mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-300">
                                 <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
@@ -1128,6 +1464,155 @@ export const ApiTesting: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* User Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-lg border border-dark-border w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <div className="flex items-center space-x-2">
+                <Key className="w-5 h-5 text-neon-green" />
+                <h2 className="text-xl font-bold text-cyber-light">用户登录</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAuthModal(false)}
+                className="text-cyber-light hover:text-neon-green"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="text-sm text-cyber-gray mb-4">
+                登录后可以测试受RLS策略保护的接口，系统将使用您的用户访问令牌进行认证。
+              </div>
+
+              {!showTokenInput ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-cyber-light mb-2">邮箱</label>
+                    <Input
+                      type="email"
+                      placeholder="输入您的邮箱地址"
+                      value={userAuth.email}
+                      onChange={(e) => setUserAuth(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-cyber-light mb-2">密码</label>
+                    <Input
+                      type="password"
+                      placeholder="输入您的密码"
+                      value={userAuth.password}
+                      onChange={(e) => setUserAuth(prev => ({ ...prev, password: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded p-3 text-xs text-blue-300">
+                    <div className="font-medium mb-1">📧 邮箱确认提醒</div>
+                    <div>如果您是首次注册或邮箱未验证，系统会发送确认邮件。请先验证邮箱后再登录。</div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="flex flex-col space-y-1">
+                      <div className="text-xs text-cyber-gray">
+                        确保您已在Supabase项目中注册此账户
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowTokenInput(true)}
+                        className="text-xs text-neon-green hover:text-neon-green/80 self-start p-0 h-auto"
+                      >
+                        已有访问令牌？点击直接输入
+                      </Button>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAuthModal(false)}
+                        className="text-cyber-light hover:text-cyber-gray"
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        onClick={handleUserLogin}
+                        disabled={authLoading || !userAuth.email || !userAuth.password}
+                        className="min-w-[80px]"
+                        variant="cyber"
+                      >
+                        {authLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          '登录'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-cyber-light mb-2">访问令牌</label>
+                    <Textarea
+                      placeholder="粘贴您的访问令牌（JWT格式）"
+                      value={manualToken}
+                      onChange={(e) => setManualToken(e.target.value)}
+                      rows={4}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+
+                  <div className="bg-green-500/10 border border-green-500/30 rounded p-3 text-xs text-green-300">
+                    <div className="font-medium mb-1">🔑 访问令牌说明</div>
+                    <div className="space-y-1">
+                      <div>• 访问令牌通常以 "ey" 开头的JWT格式</div>
+                      <div>• 可从浏览器开发者工具或Supabase客户端获取</div>
+                      <div>• 令牌包含用户身份信息和权限</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowTokenInput(false)
+                        setManualToken('')
+                      }}
+                      className="text-cyber-light hover:text-cyber-gray"
+                    >
+                      ← 返回邮箱登录
+                    </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAuthModal(false)}
+                        className="text-cyber-light hover:text-cyber-gray"
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        onClick={handleManualTokenLogin}
+                        disabled={!manualToken.trim()}
+                        className="min-w-[80px]"
+                        variant="cyber"
+                      >
+                        使用令牌
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {showHistoryModal && (

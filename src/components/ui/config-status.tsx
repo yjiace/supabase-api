@@ -1,17 +1,21 @@
 import React from 'react'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, AlertTriangle, Key, Shield } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, Key, Shield, User } from 'lucide-react'
 
 interface ConfigStatusProps {
   isJsSdkConfigValid: boolean
   isRestConfigValid: boolean
   selectedEndpointType?: 'js-sdk' | 'rest-api' | null
+  isUserAuthenticated?: boolean
+  userEmail?: string
 }
 
 export const ConfigStatus: React.FC<ConfigStatusProps> = ({
   isJsSdkConfigValid,
   isRestConfigValid,
-  selectedEndpointType
+  selectedEndpointType,
+  isUserAuthenticated = false,
+  userEmail
 }) => {
   const getStatusForEndpoint = () => {
     if (!selectedEndpointType) {
@@ -76,6 +80,17 @@ export const ConfigStatus: React.FC<ConfigStatusProps> = ({
           <Badge variant={isRestConfigValid ? "success" : "error"} className="text-xs px-2 py-0.5">
             {isRestConfigValid ? '✓' : '✗'}
           </Badge>
+        </div>
+
+        <div className="flex items-center space-x-1">
+          <User className="w-3 h-3 text-blue-400" />
+          <span className="text-xs text-cyber-gray">用户:</span>
+          <Badge variant={isUserAuthenticated ? "success" : "warning"} className="text-xs px-2 py-0.5">
+            {isUserAuthenticated ? '已登录' : '未登录'}
+          </Badge>
+          {isUserAuthenticated && userEmail && (
+            <span className="text-xs text-cyber-gray ml-1">({userEmail})</span>
+          )}
         </div>
       </div>
     </div>
