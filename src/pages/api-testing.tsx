@@ -9,6 +9,7 @@ import { CodeBlock } from '@/components/ui/code-block'
 import { JsonEditor } from '@/components/ui/json-editor'
 import { UnifiedConfig } from '@/components/ui/unified-config'
 import { ConfigStatus } from '@/components/ui/config-status'
+import { MessageContainer, message } from '@/components/ui/message'
 import { apiCategories, ApiEndpoint } from '@/data/api-docs'
 import { 
   Settings, 
@@ -317,12 +318,12 @@ export const ApiTesting: React.FC = () => {
   // 用户登录
   const handleUserLogin = async () => {
     if (!config.supabaseUrl || !config.apiKey) {
-      alert('请先配置Supabase URL和API Key')
+      message.error('请先配置Supabase URL和API Key')
       return
     }
 
     if (!userAuth.email || !userAuth.password) {
-      alert('请输入邮箱和密码')
+      message.error('请输入邮箱和密码')
       return
     }
 
@@ -353,7 +354,7 @@ export const ApiTesting: React.FC = () => {
       
       saveUserAuth(newAuth)
       setShowAuthModal(false)
-      alert('登录成功！')
+      message.success('登录成功！')
     } catch (error: any) {
       console.error('Login failed:', error)
       
@@ -365,25 +366,27 @@ export const ApiTesting: React.FC = () => {
           errorMessage?.includes('email not confirmed') ||
           errorMessage?.includes('confirm your email') ||
           errorMessage?.includes('verification')) {
-        alert(`邮箱验证提醒：
-        
-您的邮箱尚未验证，系统已向 ${userAuth.email} 发送确认邮件。
+        message.warning(
+          `您的邮箱尚未验证，系统已向 ${userAuth.email} 发送确认邮件。
 
 请按以下步骤操作：
 1. 检查您的邮箱收件箱（包括垃圾邮件文件夹）
 2. 点击确认邮件中的验证链接
 3. 验证完成后，返回此页面重新登录
 
-如果没有收到邮件，请检查邮箱地址是否正确，或稍后重试。`)
+如果没有收到邮件，请检查邮箱地址是否正确，或稍后重试。`,
+          '邮箱验证提醒',
+          8000
+        )
       } else if (errorCode === 'invalid_credentials' || 
                  errorMessage?.includes('Invalid login credentials') ||
                  errorMessage?.includes('invalid credentials')) {
-        alert('登录失败：邮箱或密码错误，请检查后重试。')
+        message.error('邮箱或密码错误，请检查后重试', '登录失败')
       } else if (errorMessage?.includes('too many requests') || 
                  errorMessage?.includes('rate limit')) {
-        alert('登录失败：请求过于频繁，请稍后再试。')
+        message.error('请求过于频繁，请稍后再试', '登录失败')
       } else {
-        alert(`登录失败: ${errorMessage}`)
+        message.error(errorMessage, '登录失败')
       }
     } finally {
       setAuthLoading(false)
@@ -407,13 +410,13 @@ export const ApiTesting: React.FC = () => {
   // 手动输入访问令牌
   const handleManualTokenLogin = () => {
     if (!manualToken.trim()) {
-      alert('请输入访问令牌')
+      message.error('请输入访问令牌')
       return
     }
 
     // 简单验证令牌格式（JWT通常以ey开头）
     if (!manualToken.startsWith('ey')) {
-      alert('访问令牌格式不正确，请检查后重试')
+      message.error('访问令牌格式不正确，请检查后重试')
       return
     }
 
@@ -428,7 +431,7 @@ export const ApiTesting: React.FC = () => {
 
       // 检查令牌是否过期
       if (payload.exp && payload.exp * 1000 < Date.now()) {
-        alert('访问令牌已过期，请重新获取')
+        message.error('访问令牌已过期，请重新获取')
         return
       }
 
@@ -443,10 +446,10 @@ export const ApiTesting: React.FC = () => {
       setShowAuthModal(false)
       setManualToken('')
       setShowTokenInput(false)
-      alert('令牌登录成功！')
+      message.success('令牌登录成功！')
     } catch (error) {
       console.error('Token parsing failed:', error)
-      alert('访问令牌解析失败，请检查令牌是否正确')
+      message.error('访问令牌解析失败，请检查令牌是否正确')
     }
   }
 
@@ -689,19 +692,19 @@ export const ApiTesting: React.FC = () => {
 
   const executeTest = async () => {
     if (!selectedEndpoint) {
-      alert('请先选择接口')
+      message.error('请先选择接口')
       return
     }
 
     // 检查配置
     if (isRestApiEndpoint(selectedEndpoint)) {
       if (!restConfig.supabaseManagementUrl || !restConfig.accessToken) {
-        alert('请先配置 REST API 认证信息')
+        message.error('请先配置 REST API 认证信息')
         return
       }
     } else {
       if (!config.supabaseUrl) {
-        alert('请先配置Supabase URL')
+        message.error('请先配置Supabase URL')
         return
       }
     }
@@ -712,7 +715,7 @@ export const ApiTesting: React.FC = () => {
 
     if (keyType === 'rest_token') {
       if (!restConfig.accessToken) {
-        alert('此接口需要个人访问令牌，请在 REST API 配置中设置')
+        message.error('此接口需要个人访问令牌，请在 REST API 配置中设置')
         return
       }
       currentApiKey = restConfig.accessToken
@@ -722,11 +725,11 @@ export const ApiTesting: React.FC = () => {
       } else if (tempServiceKey) {
         currentApiKey = tempServiceKey
       } else {
-        alert('此接口需要服务端密钥，请在设置中配置或使用临时密钥输入框')
+        message.error('此接口需要服务端密钥，请在设置中配置或使用临时密钥输入框')
         return
       }
     } else if (!['rest_token', 'service_role'].includes(keyType) && !config.apiKey) {
-      alert('请先配置API Key')
+      message.error('请先配置API Key')
       return
     }
 
@@ -744,9 +747,11 @@ export const ApiTesting: React.FC = () => {
     }
 
     if (parameterErrors.length > 0) {
-      alert('参数验证失败:\
-' + parameterErrors.join('\
-'))
+      message.error(
+        parameterErrors.join('\n'),
+        '参数验证失败',
+        6000
+      )
       return
     }
 
@@ -782,7 +787,9 @@ export const ApiTesting: React.FC = () => {
         try {
           requestData = JSON.parse(testRequest.requestBody)
         } catch (e) {
-          throw new Error('请求体JSON格式错误')
+          message.error('请求体JSON格式错误，请检查JSON语法')
+          setIsLoading(false)
+          return
         }
       }
 
@@ -835,35 +842,23 @@ export const ApiTesting: React.FC = () => {
         const needsAuth = requiresUserAuth(selectedEndpoint)
         const keyType = getRequiredKeyType(selectedEndpoint)
         
-        let suggestion = '403 Forbidden - 可能的解决方案:\
-'
+        let suggestion = '403 Forbidden - 可能的解决方案:\n'
         
         if (needsAuth && !userAuth.isAuthenticated) {
-          suggestion += '• 此接口受RLS策略保护，需要用户登录认证\
-'
-          suggestion += '• 请点击"用户登录"按钮进行认证\
-'
+          suggestion += '• 此接口受RLS策略保护，需要用户登录认证\n'
+          suggestion += '• 请点击"用户登录"按钮进行认证\n'
         } else if (keyType === 'service_role' && !config.serviceRoleKey && !tempServiceKey) {
-          suggestion += '• 此接口需要服务端密钥来绕过RLS策略\
-'
-          suggestion += '• 请配置服务端密钥或使用临时密钥输入\
-'
+          suggestion += '• 此接口需要服务端密钥来绕过RLS策略\n'
+          suggestion += '• 请配置服务端密钥或使用临时密钥输入\n'
         } else if (needsAuth && userAuth.isAuthenticated) {
-          suggestion += '• 用户已认证但仍被拒绝，可能原因:\
-'
-          suggestion += '  - RLS策略不允许当前用户访问此资源\
-'
-          suggestion += '  - 访问令牌已过期，请重新登录\
-'
-          suggestion += '  - 数据库表未启用RLS或策略配置错误\
-'
+          suggestion += '• 用户已认证但仍被拒绝，可能原因:\n'
+          suggestion += '  - RLS策略不允许当前用户访问此资源\n'
+          suggestion += '  - 访问令牌已过期，请重新登录\n'
+          suggestion += '  - 数据库表未启用RLS或策略配置错误\n'
         } else {
-          suggestion += '• 检查API密钥是否正确\
-'
-          suggestion += '• 确认数据库RLS策略配置\
-'
-          suggestion += '• 验证用户权限设置\
-'
+          suggestion += '• 检查API密钥是否正确\n'
+          suggestion += '• 确认数据库RLS策略配置\n'
+          suggestion += '• 验证用户权限设置\n'
         }
         
         errorResponse.error = suggestion
@@ -957,6 +952,7 @@ export const ApiTesting: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
+      <MessageContainer />
       {/* Header Panel */}
       <div className="bg-dark-surface border-b border-dark-border px-6 py-4">
         <div className="max-w-7xl mx-auto">
