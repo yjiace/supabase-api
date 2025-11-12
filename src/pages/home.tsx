@@ -380,43 +380,158 @@ const supabase = createClient(
           </div>
 
           {/* Additional API Keys */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <Card className="text-center border-neon-purple/20">
               <CardHeader>
-                <Database className="w-8 h-8 text-neon-purple mx-auto mb-2" />
-                <CardTitle className="text-lg">数据库密码</CardTitle>
+                <Users className="w-8 h-8 text-neon-purple mx-auto mb-2" />
+                <CardTitle className="text-lg">用户访问令牌</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-sm leading-relaxed">
-                  直接连接 PostgreSQL 数据库的密码，用于数据库客户端工具和 ORM 连接
+                  用户登录后获得的临时令牌，用于访问受 RLS 保护的用户数据
                 </CardDescription>
+                <div className="mt-3 text-xs text-cyber-gray bg-dark-surface/50 p-2 rounded">
+                  <div className="font-medium mb-1">获取方式:</div>
+                  <div>通过邮箱密码登录</div>
+                </div>
               </CardContent>
             </Card>
 
             <Card className="text-center border-yellow-500/20">
               <CardHeader>
-                <Code className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                <Globe className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                <CardTitle className="text-lg">个人访问令牌</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-sm leading-relaxed">
+                  用于 Supabase 管理 API 的令牌，具有完整账户访问权限
+                </CardDescription>
+                <div className="mt-3 text-xs text-cyber-gray bg-dark-surface/50 p-2 rounded">
+                  <div className="font-medium mb-1">获取位置:</div>
+                  <div>Dashboard → 头像 →</div>
+                  <div>Account Settings →</div>
+                  <div>Access Tokens</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center border-orange-500/20">
+              <CardHeader>
+                <Code className="w-8 h-8 text-orange-500 mx-auto mb-2" />
                 <CardTitle className="text-lg">JWT 密钥</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-sm leading-relaxed">
                   用于验证和签名 JWT 令牌的密钥，通常用于自定义认证流程
                 </CardDescription>
+                <div className="mt-3 text-xs text-cyber-gray bg-dark-surface/50 p-2 rounded">
+                  <div className="font-medium mb-1">获取位置:</div>
+                  <div>项目设置 → API →</div>
+                  <div>JWT Settings</div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="text-center border-orange-500/20">
+            <Card className="text-center border-blue-500/20">
               <CardHeader>
-                <Settings className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                <Settings className="w-8 h-8 text-blue-500 mx-auto mb-2" />
                 <CardTitle className="text-lg">项目 URL</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-sm leading-relaxed">
                   您的 Supabase 项目的唯一 URL，所有 API 请求的基础地址
                 </CardDescription>
+                <div className="mt-3 text-xs text-cyber-gray bg-dark-surface/50 p-2 rounded">
+                  <div className="font-medium mb-1">获取位置:</div>
+                  <div>项目设置 → API →</div>
+                  <div>Project URL</div>
+                </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Key Locations Guide */}
+          <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 mb-12">
+            <CardHeader>
+              <CardTitle className="text-xl text-cyber-light flex items-center space-x-2">
+                <Key className="w-6 h-6 text-blue-400" />
+                <span>密钥获取位置指南</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-lg font-semibold text-cyber-light mb-3 flex items-center space-x-2">
+                    <Database className="w-5 h-5 text-neon-green" />
+                    <span>项目级密钥（在项目设置中）</span>
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="bg-dark-surface/50 p-3 rounded-lg">
+                      <div className="font-medium text-neon-green mb-1">匿名密钥 (anon key)</div>
+                      <div className="text-cyber-gray text-xs mb-2">
+                        Dashboard → 选择项目 → Settings → API → Project API keys → anon public
+                      </div>
+                      <div className="text-cyber-gray text-xs">
+                        ✓ 可以安全地在客户端使用
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-surface/50 p-3 rounded-lg">
+                      <div className="font-medium text-orange-400 mb-1">服务密钥 (service_role key)</div>
+                      <div className="text-cyber-gray text-xs mb-2">
+                        Dashboard → 选择项目 → Settings → API → Project API keys → service_role secret
+                      </div>
+                      <div className="text-red-400 text-xs">
+                        ⚠️ 仅在服务端使用，切勿暴露
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-surface/50 p-3 rounded-lg">
+                      <div className="font-medium text-blue-400 mb-1">项目 URL</div>
+                      <div className="text-cyber-gray text-xs">
+                        Dashboard → 选择项目 → Settings → API → Project URL
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-lg font-semibold text-cyber-light mb-3 flex items-center space-x-2">
+                    <Users className="w-5 h-5 text-neon-blue" />
+                    <span>账户级密钥（在账户设置中）</span>
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="bg-dark-surface/50 p-3 rounded-lg">
+                      <div className="font-medium text-yellow-400 mb-1">个人访问令牌 (Personal Access Token)</div>
+                      <div className="text-cyber-gray text-xs mb-2">
+                        Dashboard → 点击右上角头像 → Account Settings → Access Tokens → Generate New Token
+                      </div>
+                      <div className="text-orange-400 text-xs mb-2">
+                        ⚠️ 用于管理 API，具有完整账户权限
+                      </div>
+                      <div className="text-cyber-gray text-xs">
+                        • 可以管理所有项目<br/>
+                        • 用于 CI/CD 和自动化脚本<br/>
+                        • 令牌只显示一次，请妥善保存
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-surface/50 p-3 rounded-lg">
+                      <div className="font-medium text-purple-400 mb-1">用户访问令牌 (User Access Token)</div>
+                      <div className="text-cyber-gray text-xs mb-2">
+                        通过用户登录接口获取（邮箱密码、OAuth等）
+                      </div>
+                      <div className="text-cyber-gray text-xs">
+                        • 代表特定用户身份<br/>
+                        • 受 RLS 策略保护<br/>
+                        • 有时效性，需定期刷新
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Security Best Practices */}
           <Card className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/20">
@@ -435,17 +550,19 @@ const supabase = createClient(
                     <li>• 在服务端使用服务密钥 (service_role key)</li>
                     <li>• 使用环境变量存储敏感密钥</li>
                     <li>• 启用行级安全策略 (RLS)</li>
-                    <li>• 定期轮换 API 密钥</li>
+                    <li>• 定期轮换 API 密钥和个人访问令牌</li>
+                    <li>• 为个人访问令牌设置合理的权限范围</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="text-lg font-semibold text-cyber-light mb-3">❌ 不应该做的：</h4>
                   <ul className="space-y-2 text-cyber-gray text-sm">
-                    <li>• 在客户端代码中暴露服务密钥</li>
+                    <li>• 在客户端代码中暴露服务密钥或个人访问令牌</li>
                     <li>• 将密钥硬编码在源代码中</li>
                     <li>• 在公共仓库中提交密钥</li>
                     <li>• 在不安全的环境中使用服务密钥</li>
                     <li>• 忽略 RLS 策略的配置</li>
+                    <li>• 共享个人访问令牌给他人</li>
                   </ul>
                 </div>
               </div>

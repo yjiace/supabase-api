@@ -46,7 +46,8 @@ import {
   MapPin,
   UserX,
   Cog,
-  Zap
+  Zap,
+  Info
 } from 'lucide-react'
 
 export const ApiDocs: React.FC = () => {
@@ -188,35 +189,40 @@ export const ApiDocs: React.FC = () => {
           label: '匿名密钥',
           color: 'success' as const,
           icon: Key,
-          description: '客户端安全，受RLS保护'
+          description: '客户端安全，受RLS保护',
+          location: '项目设置 → API → anon public'
         }
       case 'service_role':
         return {
           label: '服务密钥',
           color: 'error' as const,
           icon: Shield,
-          description: '服务端专用，完全访问权限'
+          description: '服务端专用，完全访问权限',
+          location: '项目设置 → API → service_role secret'
         }
       case 'both':
         return {
-          label: '两种密钥',
+          label: '两种密钥均可',
           color: 'warning' as const,
           icon: Key,
-          description: '匿名密钥或服务密钥均可'
+          description: '匿名密钥或服务密钥均可',
+          location: '项目设置 → API'
         }
       case 'pat':
         return {
-          label: 'PAT 密钥',
+          label: '个人访问令牌',
           color: 'default' as const,
-          icon: Key,
-          description: 'Personal Access Token，用于 REST API'
+          icon: Globe,
+          description: 'Personal Access Token，用于管理 API',
+          location: '账户设置 → Access Tokens'
         }
       default:
         return {
           label: '未知密钥',
           color: 'default' as const,
           icon: Key,
-          description: '未知密钥类型'
+          description: '未知密钥类型',
+          location: ''
         }
     }
   }
@@ -375,20 +381,52 @@ export const ApiDocs: React.FC = () => {
                     const IconComponent = keyInfo.icon
 
                     return (
-                      <div className="flex items-center space-x-4 mb-4">
-                        <div className="flex items-center space-x-2">
-                          <IconComponent className="w-4 h-4 text-cyber-gray" />
-                          <span className="text-sm text-cyber-gray">所需密钥:</span>
+                      <div className="bg-dark-surface/50 rounded-lg p-4 border border-dark-border mb-4">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <IconComponent className="w-5 h-5 text-cyber-gray" />
+                          <span className="text-sm font-medium text-cyber-light">所需密钥类型</span>
                         </div>
-                        <Badge variant={keyInfo.color} className="flex items-center space-x-1">
-                          <IconComponent className="w-3 h-3" />
-                          <span>{keyInfo.label}</span>
-                        </Badge>
-                        <span className="text-xs text-cyber-gray">{keyInfo.description}</span>
+                        
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                          <Badge variant={keyInfo.color} className="flex items-center space-x-1 text-sm px-3 py-1">
+                            <IconComponent className="w-4 h-4" />
+                            <span>{keyInfo.label}</span>
+                          </Badge>
+                          <span className="text-sm text-cyber-gray">{keyInfo.description}</span>
+                        </div>
+                        
+                        {keyInfo.location && (
+                          <div className="flex items-start space-x-2 text-xs text-cyber-gray bg-dark-bg/50 p-2 rounded">
+                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="font-medium">获取位置: </span>
+                              <span>{keyInfo.location}</span>
+                            </div>
+                          </div>
+                        )}
+                        
                         {keyType === 'service_role' && (
-                          <div className="flex items-center space-x-1 text-red-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span className="text-xs">仅服务端使用</span>
+                          <div className="flex items-start space-x-2 mt-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-300">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span>⚠️ 服务密钥具有完全访问权限，仅在服务端环境中使用，切勿暴露在客户端代码中</span>
+                          </div>
+                        )}
+                        
+                        {keyType === 'pat' && (
+                          <div className="flex items-start space-x-2 mt-2 p-2 bg-orange-500/10 border border-orange-500/30 rounded text-xs text-orange-300">
+                            <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span>⚠️ 个人访问令牌具有完整账户管理权限，请在安全环境中使用，令牌只显示一次请妥善保存</span>
+                          </div>
+                        )}
+                        
+                        {keyType === 'both' && (
+                          <div className="flex items-start space-x-2 mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
+                            <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <div className="font-medium mb-1">密钥选择建议:</div>
+                              <div>• 使用<span className="text-neon-green">匿名密钥</span>时，数据访问受 RLS 策略保护，适合客户端使用</div>
+                              <div>• 使用<span className="text-orange-400">服务密钥</span>时，拥有完全访问权限，绕过所有 RLS 策略，仅限服务端使用</div>
+                            </div>
                           </div>
                         )}
                       </div>
