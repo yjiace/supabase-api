@@ -66,6 +66,73 @@ interface TestResponse {
   headers: Record<string, string>
   duration: number
   error?: string
+  curlCommand?: string
+}
+
+// 工具函数：密钥脱敏处理
+function maskSensitiveData(value: string): string {
+  if (!value) return value
+  
+  const length = value.length
+  
+  // 如果密钥长度小于等于 8，返回占位符
+  if (length <= 8) return '***'
+  
+  // 如果密钥长度小于等于 12，保留前 4 个和后 4 个字符
+  if (length <= 12) {
+    return value.slice(0, 4) + '***' + value.slice(-4)
+  }
+  
+  // 否则保留前 8 个和后 4 个字符
+  return value.slice(0, 8) + '***' + value.slice(-4)
+}
+
+// 工具函数：生成 curl 命令
+function generateCurlCommand(
+  method: string,
+  url: string,
+  headers: Record<string, string>,
+  body?: string
+): string {
+  const lines: string[] = []
+  
+  // 添加基本命令和方法
+  lines.push(`curl -X ${method} \\`)
+  
+  // 添加 URL（用单引号包裹以避免特殊字符问题）
+  lines.push(`  '${url}' \\`)
+  
+  // 添加请求头（对敏感信息进行脱敏）
+  Object.entries(headers).forEach(([key, value]) => {
+    let maskedValue = value
+    
+    // 对敏感字段进行脱敏
+    if (key.toLowerCase() === 'apikey' || 
+        key.toLowerCase() === 'authorization') {
+      // 如果是 Authorization Bearer token，只脱敏 token 部分
+      if (value.startsWith('Bearer ')) {
+        const token = value.substring(7)
+        maskedValue = `Bearer ${maskSensitiveData(token)}`
+      } else {
+        maskedValue = maskSensitiveData(value)
+      }
+    }
+    
+    lines.push(`  -H '${key}: ${maskedValue}' \\`)
+  })
+  
+  // 添加请求体（如果存在）
+  if (body && ['POST', 'PUT', 'PATCH'].includes(method)) {
+    // 格式化 JSON 并转义单引号
+    const escapedBody = body.replace(/'/g, "'\\''")
+    lines.push(`  -d '${escapedBody}'`)
+  } else {
+    // 移除最后一行的反斜杠
+    const lastLine = lines[lines.length - 1]
+    lines[lines.length - 1] = lastLine.replace(/ \\$/, '')
+  }
+  
+  return lines.join('\n')
 }
 
 export const ApiTesting: React.FC = () => {
@@ -524,15 +591,11 @@ export const ApiTesting: React.FC = () => {
           'Authorization': `Bearer ${selectedKey}`
         }
       } else {
-        // 对于需要用户认证的接口，优先使用用户的访问令牌
-        const authToken = (requiresUserAuth(endpoint) && userAuth.isAuthenticated) 
-          ? userAuth.accessToken 
-          : selectedKey
-        
+        // 使用选择的密钥类型，避免密钥混用
         headers = {
           'Content-Type': 'application/json',
           'apikey': selectedKey,
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${selectedKey}`
         }
       }
       
@@ -809,15 +872,11 @@ export const ApiTesting: React.FC = () => {
         }
       } else {
         // JS SDK 接口使用 apikey 和 Authorization
-        // 对于需要用户认证的接口，优先使用用户的访问令牌
-        const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
-          ? userAuth.accessToken 
-          : currentApiKey
-        
+        // 始终使用用户选择的密钥类型，避免密钥混用
         headers = {
           ...testRequest.headers,
           'apikey': currentApiKey,
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${currentApiKey}`
         }
       }
 
@@ -841,12 +900,22 @@ export const ApiTesting: React.FC = () => {
       })
 
       const duration = Date.now() - startTime
+      
+      // 生成 curl 命令
+      const curlCommand = generateCurlCommand(
+        selectedEndpoint.method,
+        url,
+        headers,
+        requestData ? JSON.stringify(requestData) : undefined
+      )
+      
       const testResult: TestResponse = {
         status: response.status,
         statusText: response.statusText,
         data: response.data,
         headers: response.headers as Record<string, string>,
-        duration
+        duration,
+        curlCommand
       }
 
       setTestResponse(testResult)
@@ -867,13 +936,50 @@ export const ApiTesting: React.FC = () => {
 
     } catch (error: any) {
       const duration = Date.now() - startTime
+      
+      // 生成 curl 命令（即使请求失败也生成）
+      const url = buildRequestUrl()
+      let headers: Record<string, string>
+      
+      if (isRestApiEndpoint(selectedEndpoint)) {
+        headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${currentApiKey}`
+        }
+      } else {
+        // 始终使用用户选择的密钥类型，避免密钥混用
+        headers = {
+          ...testRequest.headers,
+          'apikey': currentApiKey,
+          'Authorization': `Bearer ${currentApiKey}`
+        }
+      }
+      
+      let requestData = undefined
+      if (['POST', 'PUT', 'PATCH'].includes(selectedEndpoint.method)) {
+        try {
+          requestData = JSON.parse(testRequest.requestBody)
+        } catch (e) {
+          // 如果 JSON 解析失败，使用原始字符串
+          requestData = testRequest.requestBody
+        }
+      }
+      
+      const curlCommand = generateCurlCommand(
+        selectedEndpoint.method,
+        url,
+        headers,
+        requestData ? JSON.stringify(requestData) : undefined
+      )
+      
       const errorResponse: TestResponse = {
         status: error.response?.status || 0,
         statusText: error.response?.statusText || 'Network Error',
         data: error.response?.data || null,
         headers: error.response?.headers || {},
         duration,
-        error: error.message
+        error: error.message,
+        curlCommand
       }
 
       // 针对403错误提供RLS相关的解决建议
@@ -1222,9 +1328,6 @@ export const ApiTesting: React.FC = () => {
                                   onClick={() => {
                                     if (!config.anonKey) return
                                     const selectedKey = config.anonKey
-                                    const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
-                                      ? userAuth.accessToken 
-                                      : selectedKey
                                     
                                     setTestRequest(prev => ({
                                       ...prev, 
@@ -1232,7 +1335,7 @@ export const ApiTesting: React.FC = () => {
                                       headers: {
                                         'Content-Type': 'application/json',
                                         'apikey': selectedKey,
-                                        'Authorization': `Bearer ${authToken}`
+                                        'Authorization': `Bearer ${selectedKey}`
                                       }
                                     }))
                                   }}
@@ -1259,17 +1362,13 @@ export const ApiTesting: React.FC = () => {
                                   onClick={() => {
                                     if (!config.serviceRoleKey && !tempServiceKey) return
                                     const selectedKey = config.serviceRoleKey || tempServiceKey
-                                    const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
-                                      ? userAuth.accessToken 
-                                      : selectedKey
-                                    
                                     setTestRequest(prev => ({
                                       ...prev, 
                                       selectedKeyType: 'service_role',
                                       headers: {
                                         'Content-Type': 'application/json',
                                         'apikey': selectedKey,
-                                        'Authorization': `Bearer ${authToken}`
+                                        'Authorization': `Bearer ${selectedKey}`
                                       }
                                     }))
                                   }}
@@ -1460,17 +1559,13 @@ export const ApiTesting: React.FC = () => {
                               setTempServiceKey(e.target.value)
                               // 更新请求头中的密钥和密钥类型
                               if (selectedEndpoint) {
-                                const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
-                                  ? userAuth.accessToken 
-                                  : e.target.value
-                                
                                 setTestRequest(prev => ({
                                   ...prev,
                                   selectedKeyType: 'service_role',
                                   headers: {
                                     ...prev.headers,
                                     'apikey': e.target.value,
-                                    'Authorization': `Bearer ${authToken}`
+                                    'Authorization': `Bearer ${e.target.value}`
                                   }
                                 }))
                               }
@@ -1568,6 +1663,17 @@ export const ApiTesting: React.FC = () => {
                       <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
                         <div className="text-red-400 font-medium mb-2">错误信息</div>
                         <div className="text-red-300 text-sm">{testResponse.error}</div>
+                      </div>
+                    )}
+                    
+                    {/* cURL 命令显示 */}
+                    {testResponse.curlCommand && (
+                      <div>
+                        <h4 className="text-sm font-medium text-cyber-light mb-2">cURL 命令</h4>
+                        <CodeBlock
+                          code={testResponse.curlCommand}
+                          language="bash"
+                        />
                       </div>
                     )}
                     
