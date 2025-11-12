@@ -1,25 +1,53 @@
 # 数据库
 ## 获取数据
 文档：https://supabase.com/docs/reference/javascript/select
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 ## 插入数据
 文档：https://supabase.com/docs/reference/javascript/insert
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 ## 更新数据
 文档：https://supabase.com/docs/reference/javascript/update
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 ## 更新插入数据
 文档：https://supabase.com/docs/reference/javascript/upsert
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 ## 删除数据
 文档：https://supabase.com/docs/reference/javascript/delete
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 ## 调用 Postgres 函数
 文档：https://supabase.com/docs/reference/javascript/rpc
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 # 认证
 ## 创建新用户
 文档：https://supabase.com/docs/reference/javascript/auth-signup
+密钥类型：匿名密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 ## 监听身份验证事件
 文档：https://supabase.com/docs/reference/javascript/auth-onauthstatechange
@@ -97,8 +125,12 @@
 文档：https://supabase.com/docs/reference/javascript/auth-stopautorefresh
 
 # 边缘功能
-## 调用 supabase 边缘函数。
+## 调用 supabase 边缘函数
 文档：https://supabase.com/docs/reference/javascript/functions-invoke
+密钥类型：匿名密钥或服务角色密钥
+HTTP 头：
+- apikey: {your_anon_key}
+- Authorization: Bearer {your_anon_key}
 
 # 实时
 ## 订阅频道

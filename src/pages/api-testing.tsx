@@ -34,7 +34,7 @@ import axios from 'axios'
 
 interface TestConfig {
   supabaseUrl: string
-  apiKey: string
+  anonKey: string
   serviceRoleKey?: string
 }
 
@@ -56,6 +56,7 @@ interface TestRequest {
   parameters: Record<string, string>
   requestBody: string
   headers: Record<string, string>
+  selectedKeyType?: 'anon' | 'service_role' | 'rest_token'
 }
 
 interface TestResponse {
@@ -70,7 +71,7 @@ interface TestResponse {
 export const ApiTesting: React.FC = () => {
   const [config, setConfig] = useState<TestConfig>({
     supabaseUrl: '',
-    apiKey: '',
+    anonKey: '',
     serviceRoleKey: ''
   })
   
@@ -86,7 +87,8 @@ export const ApiTesting: React.FC = () => {
     endpoint: null as any,
     parameters: {},
     requestBody: '{}',
-    headers: {}
+    headers: {},
+    selectedKeyType: undefined
   })
   
   const [isLoading, setIsLoading] = useState(false)
@@ -109,6 +111,7 @@ export const ApiTesting: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false)
   const [showTokenInput, setShowTokenInput] = useState(false)
   const [manualToken, setManualToken] = useState('')
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   // 判断是否为 REST API 接口
   const isRestApiEndpoint = (endpoint: ApiEndpoint): boolean => {
@@ -236,6 +239,14 @@ export const ApiTesting: React.FC = () => {
           description: 'REST API 管理接口专用',
           warning: '⚠️ 此接口需要个人访问令牌，具有完整账户访问权限，请在安全环境中使用'
         }
+      default:
+        return {
+          label: '匿名密钥 (anon key)',
+          color: 'success',
+          icon: Key,
+          description: '客户端安全，受RLS保护',
+          warning: null
+        }
     }
   }
 
@@ -317,13 +328,13 @@ export const ApiTesting: React.FC = () => {
 
   // 用户登录
   const handleUserLogin = async () => {
-    if (!config.supabaseUrl || !config.apiKey) {
-      message.error('请先配置Supabase URL和API Key')
+    if (!config.supabaseUrl || !config.anonKey) {
+      console.error('请先配置Supabase URL和API Key')
       return
     }
 
     if (!userAuth.email || !userAuth.password) {
-      message.error('请输入邮箱和密码')
+      console.error('请输入邮箱和密码')
       return
     }
 
@@ -338,8 +349,8 @@ export const ApiTesting: React.FC = () => {
         {
           headers: {
             'Content-Type': 'application/json',
-            'apikey': config.apiKey,
-            'Authorization': `Bearer ${config.apiKey}`
+            'apikey': config.anonKey,
+            'Authorization': `Bearer ${config.anonKey}`
           }
         }
       )
@@ -482,7 +493,7 @@ export const ApiTesting: React.FC = () => {
       
       // 根据接口需求选择合适的密钥
       const keyType = getRequiredKeyType(endpoint)
-      let selectedKey = config.apiKey
+      let selectedKey = config.anonKey
       
       if (keyType === 'rest_token') {
         selectedKey = restConfig.accessToken
@@ -494,6 +505,15 @@ export const ApiTesting: React.FC = () => {
         setShowTempServiceKeyInput(true)
       } else {
         setShowTempServiceKeyInput(false)
+      }
+      
+      // 根据用户选择的密钥类型覆盖默认选择
+      if (testRequest.selectedKeyType) {
+        if (testRequest.selectedKeyType === 'service_role' && config.serviceRoleKey) {
+          selectedKey = config.serviceRoleKey
+        } else if (testRequest.selectedKeyType === 'rest_token' && restConfig.accessToken) {
+          selectedKey = restConfig.accessToken
+        }
       }
       
       // 设置请求头
@@ -516,11 +536,23 @@ export const ApiTesting: React.FC = () => {
         }
       }
       
+      // 设置初始的密钥类型
+      let initialKeyType: 'anon' | 'service_role' | 'rest_token' = 'anon'
+      if (keyType === 'rest_token') {
+        initialKeyType = 'rest_token'
+      } else if (keyType === 'service_role') {
+        initialKeyType = 'service_role'
+      } else if (keyType === 'both') {
+        // 如果支持两种密钥，默认使用匿名密钥
+        initialKeyType = 'anon'
+      }
+      
       setTestRequest({
         endpoint,
         parameters: {},
         requestBody: endpoint.requestBody?.example ? JSON.stringify(endpoint.requestBody.example, null, 2) : '{}',
-        headers
+        headers,
+        selectedKeyType: initialKeyType
       })
       setTestResponse(null)
     }
@@ -710,8 +742,9 @@ export const ApiTesting: React.FC = () => {
     }
 
     // 检查密钥配置
-    const keyType = getRequiredKeyType(selectedEndpoint)
-    let currentApiKey = config.apiKey
+    // 优先使用用户选择的密钥类型，否则使用接口推荐的密钥类型
+    const keyType = testRequest.selectedKeyType || getRequiredKeyType(selectedEndpoint)
+    let currentApiKey = config.anonKey
 
     if (keyType === 'rest_token') {
       if (!restConfig.accessToken) {
@@ -728,7 +761,13 @@ export const ApiTesting: React.FC = () => {
         message.error('此接口需要服务端密钥，请在设置中配置或使用临时密钥输入框')
         return
       }
-    } else if (!['rest_token', 'service_role'].includes(keyType) && !config.apiKey) {
+    } else if (keyType === 'anon') {
+      if (!config.anonKey) {
+        message.error('请先配置匿名密钥')
+        return
+      }
+      currentApiKey = config.anonKey
+    } else if (!config.anonKey) {
       message.error('请先配置API Key')
       return
     }
@@ -922,7 +961,7 @@ export const ApiTesting: React.FC = () => {
     setShowHistoryModal(false)
   }
 
-  const isConfigValid = !!(config.supabaseUrl && config.apiKey)
+  const isConfigValid = !!(config.supabaseUrl && config.anonKey)
   const isRestConfigValid = !!(restConfig.supabaseManagementUrl && restConfig.accessToken)
 
   // 检查当前选择的接口是否有足够的密钥配置
@@ -936,7 +975,7 @@ export const ApiTesting: React.FC = () => {
     if (keyType === 'service_role') {
       return config.serviceRoleKey || tempServiceKey || showTempServiceKeyInput
     }
-    return config.apiKey
+    return config.anonKey
   }
 
   // 获取当前接口类型的配置状态
@@ -953,79 +992,7 @@ export const ApiTesting: React.FC = () => {
   return (
     <div className="min-h-screen bg-dark-bg pt-16">
       <MessageContainer />
-      {/* Header Panel */}
-      <div className="bg-dark-surface border-b border-dark-border px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Settings className="w-6 h-6 text-neon-green" />
-              <h1 className="text-2xl font-bold text-cyber-light">接口测试</h1>
-            </div>
-            
-            {/* Header Actions */}
-            <div className="flex items-center space-x-3">
-              {/* User Auth Status */}
-              <div className="flex items-center space-x-2">
-                {userAuth.isAuthenticated ? (
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="success" className="text-xs font-medium px-2 py-1">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      已登录 ({userAuth.user?.email || '用户'})
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleUserLogout}
-                      className="text-xs text-cyber-gray hover:text-red-400 border border-transparent hover:border-red-400/30"
-                    >
-                      登出
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="warning" className="text-xs font-medium px-2 py-1">
-                      <Key className="w-3 h-3 mr-1" />
-                      未登录
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAuthModal(true)}
-                      className="flex items-center space-x-1 text-cyber-light hover:text-neon-green border border-transparent hover:border-neon-green/30"
-                    >
-                      <Key className="w-4 h-4" />
-                      <span className="text-sm">用户登录</span>
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {testHistory.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowHistoryModal(true)}
-                  className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
-                >
-                  <History className="w-4 h-4" />
-                  <span className="text-sm">测试历史</span>
-                </Button>
-              )}
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center space-x-2 text-cyber-light hover:text-neon-green"
-              >
-                <Settings className="w-4 h-4" />
-                <span>{showSettings ? '隐藏配置' : '显示配置'}</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      
       <div className="max-w-7xl mx-auto p-6">
         {/* Configuration Status */}
         <div className="mb-6">
@@ -1039,22 +1006,13 @@ export const ApiTesting: React.FC = () => {
             }
             isUserAuthenticated={userAuth.isAuthenticated}
             userEmail={userAuth.user?.email}
+            onOpenSettings={() => setShowSettings(true)}
+            onLogin={() => setShowAuthModal(true)}
+            onLogout={handleUserLogout}
+            onOpenHistory={() => setShowHistoryModal(true)}
+            hasHistory={testHistory.length > 0}
           />
         </div>
-
-        {/* Unified Configuration Panel */}
-        {showSettings && (
-          <div className="mb-6">
-            <UnifiedConfig
-              config={config}
-              restConfig={restConfig}
-              onConfigChange={saveConfig}
-              onRestConfigChange={saveRestConfig}
-              isVisible={true}
-              onToggleVisibility={() => setShowSettings(false)}
-            />
-          </div>
-        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Request Configuration */}
@@ -1196,6 +1154,131 @@ export const ApiTesting: React.FC = () => {
                           <code className="block text-neon-green text-sm break-all">{buildRequestUrl()}</code>
                         </div>
                       </div>
+
+                      {/* 密钥类型选择器 */}
+                      {(() => {
+                        const currentKeyType = getRequiredKeyType(selectedEndpoint)
+                        return (currentKeyType === 'both' || currentKeyType === 'anon' || currentKeyType === 'service_role') && (
+                          <div>
+                            <div className="flex items-center space-x-2 mb-2">
+                              <label className="text-sm font-medium text-cyber-light">认证密钥类型</label>
+                              <div className="relative group">
+                                <HelpCircle className="w-4 h-4 text-cyber-gray hover:text-neon-green cursor-help" />
+                                <div className="absolute left-0 top-6 hidden group-hover:block z-10 bg-dark-surface border border-dark-border rounded-lg p-3 shadow-lg min-w-[300px]">
+                                  <div className="text-xs text-cyber-gray">
+                                    <div className="mb-2 font-medium">密钥类型说明:</div>
+                                    <div className="space-y-2">
+                                      <div>
+                                        <span className="font-medium text-neon-green">匿名密钥</span>
+                                        <span className="text-cyber-gray"> - 客户端安全，受RLS策略保护</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-orange-400">服务端密钥</span>
+                                        <span className="text-cyber-gray"> - 服务端专用，完全访问权限</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-blue-400">个人访问令牌</span>
+                                        <span className="text-cyber-gray"> - REST API管理接口专用</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const selectedKey = config.anonKey
+                                  const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
+                                    ? userAuth.accessToken 
+                                    : selectedKey
+                                  
+                                  setTestRequest(prev => ({
+                                    ...prev, 
+                                    selectedKeyType: 'anon',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'apikey': selectedKey,
+                                      'Authorization': `Bearer ${authToken}`
+                                    }
+                                  }))
+                                }}
+                                className={`p-2 rounded-lg border text-sm text-center transition-all ${
+                                  testRequest.selectedKeyType === 'anon' 
+                                    ? 'bg-blue-500/20 border-blue-500 text-blue-400' 
+                                    : 'bg-dark-surface/50 border-dark-border text-cyber-gray hover:border-blue-500/50'
+                                }`}
+                              >
+                                <Key className="w-4 h-4 mx-auto mb-1" />
+                                <div>匿名密钥</div>
+                                <div className="text-xs opacity-70">安全推荐</div>
+                              </button>
+                              
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const selectedKey = config.serviceRoleKey || tempServiceKey
+                                  const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
+                                    ? userAuth.accessToken 
+                                    : selectedKey
+                                  
+                                  setTestRequest(prev => ({
+                                    ...prev, 
+                                    selectedKeyType: 'service_role',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'apikey': selectedKey,
+                                      'Authorization': `Bearer ${authToken}`
+                                    }
+                                  }))
+                                }}
+                                className={`p-2 rounded-lg border text-sm text-center transition-all ${
+                                  testRequest.selectedKeyType === 'service_role' 
+                                    ? 'bg-orange-500/20 border-orange-500 text-orange-400' 
+                                    : 'bg-dark-surface/50 border-dark-border text-cyber-gray hover:border-orange-500/50'
+                                }`}
+                                disabled={!config.serviceRoleKey && !tempServiceKey}
+                              >
+                                <Shield className="w-4 h-4 mx-auto mb-1" />
+                                <div>服务端密钥</div>
+                                <div className="text-xs opacity-70">
+                                  {config.serviceRoleKey ? '已配置' : tempServiceKey ? '临时密钥' : '未配置'}
+                                </div>
+                              </button>
+                              
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const selectedKey = restConfig.accessToken
+                                  
+                                  setTestRequest(prev => ({
+                                    ...prev, 
+                                    selectedKeyType: 'rest_token',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      'Authorization': `Bearer ${selectedKey}`
+                                    }
+                                  }))
+                                }}
+                                className={`p-2 rounded-lg border text-sm text-center transition-all ${
+                                  testRequest.selectedKeyType === 'rest_token' 
+                                    ? 'bg-purple-500/20 border-purple-500 text-purple-400' 
+                                    : 'bg-dark-surface/50 border-dark-border text-cyber-gray hover:border-purple-500/50'
+                                }`}
+                                disabled={!restConfig.accessToken}
+                              >
+                                <Globe className="w-4 h-4 mx-auto mb-1" />
+                                <div>个人令牌</div>
+                                <div className="text-xs opacity-70">
+                                  {restConfig.accessToken ? '已配置' : '未配置'}
+                                </div>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {/* Parameters */}
@@ -1328,14 +1411,19 @@ export const ApiTesting: React.FC = () => {
                             value={tempServiceKey}
                             onChange={(e) => {
                               setTempServiceKey(e.target.value)
-                              // 更新请求头中的密钥
+                              // 更新请求头中的密钥和密钥类型
                               if (selectedEndpoint) {
+                                const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
+                                  ? userAuth.accessToken 
+                                  : e.target.value
+                                
                                 setTestRequest(prev => ({
                                   ...prev,
+                                  selectedKeyType: 'service_role',
                                   headers: {
                                     ...prev.headers,
                                     'apikey': e.target.value,
-                                    'Authorization': `Bearer ${e.target.value}`
+                                    'Authorization': `Bearer ${authToken}`
                                   }
                                 }))
                               }
@@ -1354,12 +1442,17 @@ export const ApiTesting: React.FC = () => {
                                 setTempServiceKey('')
                                 // 恢复使用匿名密钥
                                 if (selectedEndpoint) {
+                                  const authToken = (requiresUserAuth(selectedEndpoint) && userAuth.isAuthenticated) 
+                                    ? userAuth.accessToken 
+                                    : config.anonKey
+                                  
                                   setTestRequest(prev => ({
                                     ...prev,
+                                    selectedKeyType: 'anon',
                                     headers: {
                                       ...prev.headers,
-                                      'apikey': config.apiKey,
-                                      'Authorization': `Bearer ${config.apiKey}`
+                                      'apikey': config.anonKey,
+                                      'Authorization': `Bearer ${authToken}`
                                     }
                                   }))
                                 }
@@ -1455,8 +1548,6 @@ export const ApiTesting: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-
-
           </div>
         </div>
       </div>
@@ -1700,6 +1791,39 @@ export const ApiTesting: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-dark-surface rounded-lg border border-dark-border w-full max-w-5xl max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-dark-border">
+              <div className="flex items-center space-x-2">
+                <Settings className="w-5 h-5 text-neon-green" />
+                <h2 className="text-xl font-bold text-cyber-light">API 配置</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSettings(false)}
+                className="text-cyber-light hover:text-neon-green"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(85vh-120px)]">
+              <UnifiedConfig
+                config={config}
+                restConfig={restConfig}
+                onConfigChange={saveConfig}
+                onRestConfigChange={saveRestConfig}
+                isVisible={true}
+                onToggleVisibility={() => setShowSettings(false)}
+              />
             </div>
           </div>
         </div>

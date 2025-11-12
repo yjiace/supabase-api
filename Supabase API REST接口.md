@@ -1,94 +1,134 @@
-#认证
+# Supabase 管理 API (REST API)
+
 官网：https://supabase.com/docs/reference/api/introduction
+
+**重要说明：**
+- 所有 REST API 端点需要使用**个人访问令牌 (Personal Access Token)** 进行身份验证
+- HTTP 头格式：`Authorization: Bearer {your_personal_access_token}`
+- 个人访问令牌可在 Supabase Dashboard 的 Account Settings > Access Tokens 中生成
+- 这些 API 仅用于管理操作，不应在客户端代码中使用
+
 # 分析学
 ## 获取项目的函数组合统计信息
-官网：https://supabase.com/docs/reference/api/v1-get-project-function-combined-stats
-url：/v1/projects/{ref}/analytics/endpoints/functions.combined-stats
+文档：https://supabase.com/docs/reference/api/v1-get-project-function-combined-stats
+方法：GET
+URL：/v1/projects/{ref}/analytics/endpoints/functions.combined-stats
+密钥类型：个人访问令牌
+HTTP 头：Authorization: Bearer {your_personal_access_token}
 
 ## 获取项目日志
 文档：https://supabase.com/docs/reference/api/v1-get-project-logs
-url：/v1/projects/{ref}/analytics/endpoints/logs.all
+方法：GET
+URL：/v1/projects/{ref}/analytics/endpoints/logs.all
+密钥类型：个人访问令牌
+HTTP 头：Authorization: Bearer {your_personal_access_token}
 
 ## 获取项目的使用 API 计数
 文档：https://supabase.com/docs/reference/api/v1-get-project-usage-api-count
-url：/v1/projects/{ref}/analytics/endpoints/usage.api-counts
+方法：GET
+URL：/v1/projects/{ref}/analytics/endpoints/usage.api-counts
+密钥类型：个人访问令牌
+HTTP 头：Authorization: Bearer {your_personal_access_token}
 
 ## 获取项目的使用 API 请求计数
 文档：https://supabase.com/docs/reference/api/v1-get-project-usage-request-count
-url：/v1/projects/{ref}/analytics/endpoints/usage.api-requests-count
+方法：GET
+URL：/v1/projects/{ref}/analytics/endpoints/usage.api-requests-count
+密钥类型：个人访问令牌
+HTTP 头：Authorization: Bearer {your_personal_access_token}
 
-# 认证
+# 认证配置
+**说明：** 所有认证配置接口需要个人访问令牌，HTTP 头：`Authorization: Bearer {token}`
+
 ## 创建 SSO 提供程序
 文档：https://supabase.com/docs/reference/api/v1-create-a-sso-provider
-url：/v1/projects/{ref}/config/auth/sso/providers
+方法：POST
+URL：/v1/projects/{ref}/config/auth/sso/providers
 
 ## 创建旧签名密钥
 文档：https://supabase.com/docs/reference/api/v1-create-legacy-signing-key
-url：/v1/projects/{ref}/config/auth/signing-keys/legacy
+方法：POST
+URL：/v1/projects/{ref}/config/auth/signing-keys/legacy
 
 ## 创建项目签名密钥
 文档：https://supabase.com/docs/reference/api/v1-create-project-signing-key
-url：/v1/projects/{ref}/config/auth/signing-keys
+方法：POST
+URL：/v1/projects/{ref}/config/auth/signing-keys
 
 ## 创建项目 tpa 集成
 文档：https://supabase.com/docs/reference/api/v1-create-project-tpa-integration
-url：/v1/projects/{ref}/config/auth/third-party-auth
+方法：POST
+URL：/v1/projects/{ref}/config/auth/third-party-auth
 
 ## 删除 SSO 提供程序
 文档：https://supabase.com/docs/reference/api/v1-delete-a-sso-provider
-url：/v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+方法：DELETE
+URL：/v1/projects/{ref}/config/auth/sso/providers/{provider_id}
 
 ## 删除项目 tpa 集成
 文档：https://supabase.com/docs/reference/api/v1-delete-project-tpa-integration
-url：/v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
+方法：DELETE
+URL：/v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
 
 ## 获取 SSO 提供商
 文档：https://supabase.com/docs/reference/api/v1-get-a-sso-provider
-url：/v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+方法：GET
+URL：/v1/projects/{ref}/config/auth/sso/providers/{provider_id}
 
 ## 获取身份验证服务配置
 文档：https://supabase.com/docs/reference/api/v1-get-auth-service-config
-url：/v1/projects/{ref}/config/auth
+方法：GET
+URL：/v1/projects/{ref}/config/auth
 
 ## 获取旧签名密钥
 文档：https://supabase.com/docs/reference/api/v1-get-legacy-signing-key
-url：/v1/projects/{ref}/config/auth/signing-keys/legacy
+方法：GET
+URL：/v1/projects/{ref}/config/auth/signing-keys/legacy
 
 ## 获取项目签名密钥
 文档：https://supabase.com/docs/reference/api/v1-get-project-signing-key
-url：/v1/projects/{ref}/config/auth/signing-keys/{id}
+方法：GET
+URL：/v1/projects/{ref}/config/auth/signing-keys/{id}
 
-## 获取项目签名密钥
+## 获取所有项目签名密钥
 文档：https://supabase.com/docs/reference/api/v1-get-project-signing-keys
-url：/v1/projects/{ref}/config/auth/signing-keys
+方法：GET
+URL：/v1/projects/{ref}/config/auth/signing-keys
 
 ## 获取项目 tpa 集成
 文档：https://supabase.com/docs/reference/api/v1-get-project-tpa-integration
-url：/v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
+方法：GET
+URL：/v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
 
 ## 列出所有 SSO 提供程序
 文档：https://supabase.com/docs/reference/api/v1-list-all-sso-provider
-url：/v1/projects/{ref}/config/auth/sso/providers
+方法：GET
+URL：/v1/projects/{ref}/config/auth/sso/providers
 
 ## 列出项目 tpa 集成
 文档：https://supabase.com/docs/reference/api/v1-list-project-tpa-integrations
-url：/v1/projects/{ref}/config/auth/third-party-auth
+方法：GET
+URL：/v1/projects/{ref}/config/auth/third-party-auth
 
 ## 删除项目签名密钥
 文档：https://supabase.com/docs/reference/api/v1-remove-project-signing-key
-url：/v1/projects/{ref}/config/auth/signing-keys/{id}
+方法：DELETE
+URL：/v1/projects/{ref}/config/auth/signing-keys/{id}
 
 ## 更新 SSO 提供程序
 文档：https://supabase.com/docs/reference/api/v1-update-a-sso-provider
-url：/v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+方法：PATCH
+URL：/v1/projects/{ref}/config/auth/sso/providers/{provider_id}
 
 ## 更新身份验证服务配置
 文档：https://supabase.com/docs/reference/api/v1-update-auth-service-config
-url：/v1/projects/{ref}/config/auth
+方法：PATCH
+URL：/v1/projects/{ref}/config/auth
 
 ## 更新项目签名密钥
 文档：https://supabase.com/docs/reference/api/v1-update-project-signing-key
-url：/v1/projects/{ref}/config/auth/signing-keys/{id}
+方法：PATCH
+URL：/v1/projects/{ref}/config/auth/signing-keys/{id}
 
 # 计费
 ## 应用项目插件
